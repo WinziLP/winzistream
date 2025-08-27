@@ -106,22 +106,33 @@
     .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
     .error-box.show{display:flex}
 
-    /* ---------- Footer full-bleed Linien + Überschriften ---------- */
-    .site-footer{width:100%;color:var(--muted);margin:2rem 0 1rem;position:relative}
-    .footer-inner{max-width:var(--maxw);margin:0 auto;padding:1.25rem 1rem 2rem}
-    .sep{position:relative;left:50%;transform:translateX(-50%);width:100vw;height:1px;background:rgba(255,255,255,.08);pointer-events:none}
-    .sep.mid{margin:.75rem 0;background:rgba(255,255,255,.06)}
-
+    .site-footer{max-width:var(--maxw);margin:2rem auto 1rem;padding:1.25rem 1rem 2rem;color:var(--muted);position:relative;font-size:.95rem;content-visibility:auto;contain-intrinsic-size: 800px; overflow:visible}
     .footer-top{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
-    .footer-heading{font:800 .78rem/1 var(--font-body);text-transform:uppercase;letter-spacing:.12em;color:var(--muted);opacity:.9;margin:0 0 .4rem}
     .footer-links{display:flex;flex-direction:column;gap:.25rem}
     .footer-links a{color:var(--muted);text-decoration:none;font-weight:500;opacity:.9}
 
-    .footer-bottom{margin-top:.5rem;font-size:.85rem;text-align:center}
+    /* Vollbreite Trenner (echte DOM-Elemente) */
+    .bleed-line{
+      position:relative;
+      left:50%;
+      margin-left:-50vw;
+      width:100vw;
+      height:1px;
+      background:rgba(255,255,255,.08);
+      pointer-events:none;
+    }
+    .bleed-line.subtle{ background:rgba(255,255,255,.06); }
+
+    .footer-bottom{
+      margin-top:.75rem;padding-top:.6rem;font-size:.85rem;
+      display:grid;place-items:center;text-align:center;position:relative
+    }
 
     @media (max-width:1024px){.hero{grid-template-columns:1fr}.cta{justify-content:center}}
     @media (max-width:560px){.btn{width:100%;justify-content:center}}
-    @media (prefers-reduced-motion: reduce){.btn,.player,.player-host{transition:none}}
+    @media (prefers-reduced-motion: reduce){
+      .btn,.player,.player-host{transition:none}
+    }
   </style>
 </head>
 <body>
@@ -151,7 +162,7 @@
           <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
           </button>
-        <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
+          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
           </button>
         </div>
@@ -183,31 +194,23 @@
 </main>
 
 <footer class="site-footer">
-  <!-- obere durchgehende Linie -->
-  <div class="sep" aria-hidden="true"></div>
+  <!-- Vollbreite Linie oben -->
+  <div class="bleed-line"></div>
 
-  <div class="footer-inner">
-    <div class="footer-top">
-      <div>
-        <h3 class="footer-heading">Kanäle</h3>
-        <nav class="footer-links" aria-label="Kanäle">
-          <a class="twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener">Twitch</a>
-          <a class="kick" href="https://kick.com/winzi" target="_blank" rel="noopener">Kick</a>
-        </nav>
-      </div>
-      <div>
-        <h3 class="footer-heading">Kontakt</h3>
-        <nav class="footer-links" aria-label="Kontakt">
-          <a href="mailto:winzibusiness@gmail.com">winzibusiness@gmail.com</a>
-        </nav>
-      </div>
-    </div>
-
-    <!-- mittlere durchgehende Linie -->
-    <div class="sep mid" aria-hidden="true"></div>
-
-    <div class="footer-bottom">© <span id="year"></span> Winzi. Alle Rechte vorbehalten.</div>
+  <div class="footer-top">
+    <nav class="footer-links" aria-label="Kanäle">
+      <a class="twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener">Twitch</a>
+      <a class="kick" href="https://kick.com/winzi" target="_blank" rel="noopener">Kick</a>
+    </nav>
+    <nav class="footer-links" aria-label="Kontakt">
+      <a href="mailto:winzibusiness@gmail.com">winzibusiness@gmail.com</a>
+    </nav>
   </div>
+
+  <!-- Vollbreite Linie zwischen Blöcken -->
+  <div class="bleed-line subtle"></div>
+
+  <div class="footer-bottom">© <span id="year"></span> Winzi. Alle Rechte vorbehalten.</div>
 </footer>
 
 <!-- Inline Icons -->
@@ -247,10 +250,9 @@
 
     let twitchPlayer = null;
     let twitchRO = null;
-    let es = null; // EventSource Handle
-    let pollingTimer = null;
+    let es = null;              // <-- nur EINMAL deklariert
+    let pollingTimer = null;    // <-- nur EINMAL deklariert
 
-    // Kick helpers
     const getKickEl = () => document.getElementById('kick-player');
     const buildKickEl = () => {
       const el = document.createElement('iframe');
@@ -264,7 +266,6 @@
       return el;
     };
 
-    // Twitch helpers
     function canEmbedTwitch(){
       const proto = location.protocol, host = location.hostname;
       if (proto === 'https:') return true;
@@ -317,7 +318,6 @@
     }
     function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
 
-    // Kick URL & control
     function kickURL(muted){
       const u = new URL('https://player.kick.com/winzi');
       u.searchParams.set('autoplay','true');
@@ -343,7 +343,6 @@
       },0);
     }
 
-    // Render (via rAF)
     let rafId=null;
     function scheduleRender(){ if (rafId) return; rafId = requestAnimationFrame(()=>{ rafId=null; render(); }); }
 
@@ -383,15 +382,11 @@
       if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
       const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
 
-      // Watchdog: wenn Twitch aktiv ist, Kick IMMER stoppen
       if (state.current === 'twitch'){
         const el = getKickEl();
         if (el && el.src && !el.src.startsWith('about:')) pauseKick();
       }
-      // Twitch-RO sparen, wenn Twitch nicht sichtbar
-      if (twitchRO){
-        if (!showT) try{ twitchRO.disconnect(); twitchRO=null; }catch(e){}
-      }
+      if (twitchRO && !showT){ try{ twitchRO.disconnect(); twitchRO=null; }catch(e){} }
     }
 
     function show(which){
@@ -400,7 +395,6 @@
       state.current = which; scheduleRender();
     }
 
-    // Events
     twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); }, {passive:true});
     kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  }, {passive:true});
     heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; }, {passive:true});
@@ -420,14 +414,12 @@
     }, { threshold:[0,0.5,1], rootMargin:"0px" });
     io.observe(heroCard);
 
-    // Initial
+    document.getElementById('year').textContent = new Date().getFullYear();
     render();
 
-    // Live-Status
     const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
     const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
-    let es = null; let pollingTimer=null;
     function applyLive(t,k){
       const prev = {t:state.twitchLive,k:state.kickLive,cur:state.current};
       state.twitchLive = !!t; state.kickLive = !!k;
@@ -436,7 +428,9 @@
       else state.current = 'twitch';
       if (prev.t!==state.twitchLive || prev.k!==state.kickLive || prev.cur!==state.current) scheduleRender();
     }
+
     function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
+
     function startSSE(){
       if (es || !supportsSSE() || !STATUS_SSE) return;
       es = new EventSource(STATUS_SSE);
@@ -444,6 +438,7 @@
       es.addEventListener('error', ()=>{ stopSSE(); startPolling(true); });
     }
     function stopSSE(){ if (es){ try{ es.close(); }catch{} es=null; } }
+
     function startPolling(immediate=false){
       clearTimeout(pollingTimer);
       const TTL_VISIBLE = 10000, TTL_HIDDEN = 45000;
@@ -472,6 +467,7 @@
       if (immediate) tick(); else pollingTimer = setTimeout(tick, 1);
     }
     function stopPolling(){ clearTimeout(pollingTimer); pollingTimer=null; }
+
     function maybeStartLive(){
       const liveParam = new URLSearchParams(location.search).get('live');
       if (liveParam) {
@@ -479,10 +475,17 @@
         if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
       }
       if (!STATUS_ENDPOINT && !STATUS_SSE) return;
+
       const visible = document.visibilityState==='visible' && state.heroInView;
-      if (visible){ stopPolling(); if (STATUS_SSE) startSSE(); else startPolling(true); }
-      else { stopSSE(); startPolling(false); }
+      if (visible){
+        stopPolling();
+        if (STATUS_SSE) startSSE(); else startPolling(true);
+      } else {
+        stopSSE();
+        startPolling(false);
+      }
     }
+
     (window.requestIdleCallback || setTimeout)(()=> maybeStartLive(), 500);
   })();
 </script>
