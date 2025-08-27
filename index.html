@@ -9,22 +9,14 @@
   <meta name="theme-color" content="#160b22" />
   <meta name="color-scheme" content="dark light">
 
-  <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
-  <link rel="preconnect" href="https://player.kick.com" crossorigin>
-
-  <!-- Live-Status (Edge) -->
+  <!-- Live-Status Endpoints (JSON + SSE) -->
   <meta name="status-endpoint" content="https://status.winzi.stream/winzi.json">
   <meta name="status-sse" content="https://status.winzi.stream/winzi.sse">
 
-  <!-- Twitch parents (Prod) -->
+  <!-- Twitch parents (für Embed Domain-Whitelist) -->
   <meta name="twitch-parents" content="winzi.stream,www.winzi.stream,localhost,127.0.0.1">
 
-  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-
-  <meta property="og:title" content="Winzi – Live auf Twitch & Kick" />
-  <meta property="og:description" content="Folge Winzi auf Twitch & Kick für Livestreams und Updates." />
-  <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://winzi.stream" />
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500,1,600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
     :root {
@@ -60,10 +52,10 @@
     .sub{color:var(--muted);max-width:55ch}
     .cta{display:flex;gap:.5rem;margin-top:1.1rem;flex-wrap:wrap}
     .btn{--btn-bg:var(--card);--btn-bd:rgba(255,255,255,.09);--btn-tx:var(--text);
-      display:inline-flex;align-items:center;gap:.5rem;padding:.65rem .85rem;border-radius:.9rem;border:1px solid var(--btn-bd);
+      display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:.9rem;border:1px solid var(--btn-bd);
       text-decoration:none;color:var(--btn-tx);background:var(--btn-bg);box-shadow:var(--shadow);
       transition:transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease;
-      font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:.95rem;white-space:nowrap}
+      font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:.92rem;white-space:nowrap}
     .btn:hover{transform:translateY(-2px);box-shadow:0 16px 35px rgba(0,0,0,.45)}
     .btn:focus{outline:3px solid var(--ring);outline-offset:2px}
     .btn .ico{width:18px;height:18px}
@@ -107,6 +99,7 @@
     @media (max-width:560px){.btn{width:100%;justify-content:center}}
   </style>
 
+  <!-- Inline Icons -->
   <svg width="0" height="0" style="position:absolute; width:0; height:0; overflow:hidden" aria-hidden="true" focusable="false">
     <defs>
       <symbol id="ico-twitch" viewBox="0 0 512 512">
@@ -135,7 +128,7 @@
         </div>
       </div>
 
-      <div class="hero-card">
+      <div class="hero-card" id="hero-card">
         <div class="embed-wrap">
           <div class="tabs" role="tablist">
             <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
@@ -147,15 +140,23 @@
           </div>
 
           <div id="panel-twitch" role="tabpanel" aria-labelledby="tab-twitch" hidden>
-            <iframe id="twitch-player" class="player" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="origin-when-cross-origin"></iframe>
+            <iframe id="twitch-player" class="player"
+              allow="autoplay; fullscreen; picture-in-picture"
+              allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
+              loading="lazy" fetchpriority="high"></iframe>
           </div>
           <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
-            <iframe id="kick-player" class="player" allowfullscreen allow="autoplay; fullscreen; picture-in-picture" referrerpolicy="origin-when-cross-origin"></iframe>
+            <iframe id="kick-player" class="player"
+              allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
+              allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin"
+              loading="lazy" fetchpriority="high"></iframe>
           </div>
 
           <div id="offline-box" class="offline-box">Currently Offline :c</div>
           <div id="embed-error" class="error-box">
-            <div>Der Twitch‑Player kann in einer lokalen Datei (file://) nicht eingebettet werden.</div>
+            <div>Der Twitch-Player kann in einer lokalen Datei (file://) nicht eingebettet werden.</div>
             <div style="font-weight:600">Öffne den Stream extern oder starte die Seite über http://localhost:</div>
             <div class="cta" style="margin-top:.5rem">
               <a class="btn twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch ansehen</a>
@@ -194,37 +195,65 @@
       const kickPlayer   = document.getElementById('kick-player');
       const btnTwitch = document.getElementById('btn-twitch');
       const btnKick   = document.getElementById('btn-kick');
+      const heroCard  = document.getElementById('hero-card');
 
-      let state = { twitchLive:false, kickLive:false, current:'twitch', twitchLoaded:false, kickLoaded:false };
+      let state = {
+        twitchLive:false, kickLive:false,
+        current:'twitch',
+        twitchLoaded:false, kickLoaded:false,
+        userInteracted:false,
+        heroInView:true
+      };
 
+      // Helpers
       function canEmbedTwitch(){
         const proto = location.protocol, host = location.hostname;
         if (proto === 'https:') return true;
         if (proto === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
-        return false; // file://
+        return false; // file:// blockiert
       }
-      function ensureSrc(which){
-        if (which === 'twitch' && !state.twitchLoaded) {
+      function twitchURL(muted){
+        const u = new URL('https://player.twitch.tv/');
+        u.searchParams.set('channel','winzilp');
+        const parentsMeta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
+        const parents = parentsMeta.split(',').map(s=>s.trim()).filter(Boolean);
+        const h = location.hostname; if (h) parents.push(h);
+        ['localhost','127.0.0.1'].forEach(p=>{ if(!parents.includes(p)) parents.push(p); });
+        parents.forEach(p=>u.searchParams.append('parent',p));
+        u.searchParams.set('autoplay','true');
+        u.searchParams.set('muted', String(!!muted));
+        return u.toString();
+      }
+      function kickURL(muted){
+        const u = new URL('https://player.kick.com/winzi');
+        u.searchParams.set('autoplay','true');
+        u.searchParams.set('muted', String(!!muted));
+        u.searchParams.set('playsinline','1');
+        return u.toString();
+      }
+      function stop(which){
+        if (which==='twitch' && state.twitchLoaded){ twitchPlayer.removeAttribute('src'); state.twitchLoaded=false; }
+        if (which==='kick'   && state.kickLoaded){   kickPlayer.removeAttribute('src');   state.kickLoaded=false; }
+      }
+      function ensureSrc(which, muted){
+        if (which==='twitch'){
           if (!canEmbedTwitch()) { state.twitchLoaded = true; return; }
-          const u = new URL('https://player.twitch.tv/');
-          u.searchParams.set('channel','winzilp');
-          const parentsMeta = document.querySelector('meta[name=\"twitch-parents\"]')?.content || '';
-          const parents = parentsMeta.split(',').map(s=>s.trim()).filter(Boolean);
-          const h = location.hostname; if (h) parents.push(h);
-          ['localhost','127.0.0.1'].forEach(p=>{ if(!parents.includes(p)) parents.push(p); });
-          parents.forEach(p=>u.searchParams.append('parent',p));
-          u.searchParams.set('muted','true'); u.searchParams.set('autoplay','true');
-          twitchPlayer.src = u.toString();
-          state.twitchLoaded = true;
-        }
-        if (which === 'kick' && !state.kickLoaded) {
-          kickPlayer.src = 'https://player.kick.com/winzi?autoplay=true';
-          state.kickLoaded = true;
+          const next = twitchURL(muted);
+          if (!state.twitchLoaded || twitchPlayer.src !== next){
+            twitchPlayer.src = next; state.twitchLoaded = true;
+          }
+        } else if (which==='kick'){
+          const next = kickURL(muted);
+          if (!state.kickLoaded || kickPlayer.src !== next){
+            kickPlayer.src = next; state.kickLoaded = true;
+          }
         }
       }
+
       function render(){
         const tOff = !state.twitchLive, kOff = !state.kickLive;
-        // Gray ONLY preview tabs
+
+        // Tabs (nur Preview-Tabs ausgrauen)
         twitchBtn.classList.toggle('online', !tOff);
         kickBtn.classList.toggle('online', !kOff);
         twitchBtn.classList.toggle('offline', tOff);
@@ -232,39 +261,75 @@
         twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
         kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
 
+        // Follow-Buttons mit LIVE-Pill
         btnTwitch.classList.toggle('live', state.twitchLive);
         btnKick.classList.toggle('live', state.kickLive);
 
-        const showT = (state.current === 'twitch' && state.twitchLive);
-        const showK = (state.current === 'kick'   && state.kickLive);
-        twitchPanel.hidden = !showT;  twitchPlayer.classList.toggle('show', showT && canEmbedTwitch());
-        kickPanel.hidden   = !showK;  kickPlayer.classList.toggle('show', showK);
+        const showT = (state.current === 'twitch' && state.twitchLive && state.heroInView);
+        const showK = (state.current === 'kick'   && state.kickLive   && state.heroInView);
 
+        // Panels sichtbar/unsichtbar
+        twitchPanel.hidden = !showT;
+        kickPanel.hidden   = !showK;
+        twitchPlayer.classList.toggle('show', showT && canEmbedTwitch());
+        kickPlayer.classList.toggle('show', showK);
+
+        // Inaktive Player stoppen (kein Bild/Ton im Hintergrund)
+        if (!showT) stop('twitch');
+        if (!showK) stop('kick');
+
+        // Aktiven Player laden: Audio nur, wenn User interagiert hat, Seite sichtbar ist und Hero im Viewport
+        const canPlayWithAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
+
+        if (showT && canEmbedTwitch()) ensureSrc('twitch', !canPlayWithAudio);
+        if (showK) ensureSrc('kick', !canPlayWithAudio);
+
+        // Offline-Anzeige
         const noOneLive = !state.twitchLive && !state.kickLive;
         offlineBox.classList.toggle('hidden', !noOneLive);
 
+        // Lokaler Embed-Fehler für Twitch (file://)
         const showEmbedError = showT && !canEmbedTwitch();
         embedErrorBox.classList.toggle('show', showEmbedError);
 
+        // ARIA
         twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
         kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
-
-        if (showT && canEmbedTwitch()) ensureSrc('twitch');
-        if (showK) ensureSrc('kick');
       }
+
       function show(which){
         if (which === 'twitch' && !state.twitchLive) return;
         if (which === 'kick'   && !state.kickLive)   return;
         state.current = which; render();
       }
-      twitchBtn.addEventListener('click', ()=>show('twitch'));
-      kickBtn.addEventListener('click',  ()=>show('kick'));
 
-      // First render = OFFLINE
+      // Events: Tabklick = User Interaktion → Audio darf
+      twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
+      kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
+      // Klick ins Player-Areal zählt auch als Interaktion
+      heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
+
+      // Sichtbarkeit (Tab) → wenn Seite versteckt wird, stoppen
+      document.addEventListener('visibilitychange', ()=>{
+        if (document.visibilityState !== 'visible'){ stop('twitch'); stop('kick'); }
+        render();
+      });
+
+      // Viewport beobachten – wenn Hero nicht sichtbar, stoppen
+      const io = new IntersectionObserver((entries)=>{
+        const e = entries[0];
+        state.heroInView = e && e.isIntersecting && e.intersectionRatio >= 0.5;
+        if (!state.heroInView){ stop('twitch'); stop('kick'); }
+        render();
+      }, { threshold:[0,0.5,1], rootMargin:"0px" });
+      io.observe(heroCard);
+
+      // Initial OFFLINE
       render();
 
-      const STATUS_ENDPOINT = document.querySelector('meta[name=\"status-endpoint\"]')?.content || '';
-      const STATUS_SSE      = document.querySelector('meta[name=\"status-sse\"]')?.content || '';
+      // Live-Status (SSE → Fallback Polling)
+      const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
+      const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
       function applyLive(t,k){
         const prev = {t:state.twitchLive,k:state.kickLive,cur:state.current};
@@ -277,13 +342,20 @@
       function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
 
       (function initLive(){
+        // Dev-Simulation: ?live=none|twitch|kick|both
         const liveParam = new URLSearchParams(location.search).get('live');
-        if (liveParam) { const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]}; if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; } }
+        if (liveParam) {
+          const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
+          if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
+        }
         if (!STATUS_ENDPOINT && !STATUS_SSE) return;
+
         if (STATUS_SSE && supportsSSE()) {
           try {
             const es = new EventSource(STATUS_SSE);
-            es.addEventListener('message', ev => { try{ const d = JSON.parse(ev.data); applyLive(!!d.twitch, !!d.kick); }catch{} });
+            es.addEventListener('message', ev => {
+              try{ const d = JSON.parse(ev.data); applyLive(!!d.twitch, !!d.kick); }catch{}
+            });
             es.addEventListener('error', () => {});
           } catch { startPolling(); }
         } else { startPolling(); }
@@ -292,12 +364,27 @@
       function startPolling(){
         const TTL_VISIBLE = 10000, TTL_HIDDEN = 45000; let etag = '', timer = null, last = {t:false,k:false};
         async function fetchStatus(){
-          try{ const h = etag ? {'If-None-Match': etag} : {}; const res = await fetch(STATUS_ENDPOINT, {headers:h, cache:'no-store'});
-            if (res.status === 304) return last; if (!res.ok) return null; etag = res.headers.get('ETag') || ''; const j = await res.json(); last = {t:!!j.twitch,k:!!j.kick}; return last;
-          }catch{return null}}
-        async function tick(){ clearTimeout(timer); const r = await fetchStatus(); if (r) applyLive(r.t, r.k);
-          const ttl = (document.visibilityState==='visible'?TTL_VISIBLE:TTL_HIDDEN) * ((state.twitchLive||state.kickLive)?0.6:1); timer = setTimeout(tick, Math.max(6000, ttl)); }
-        document.addEventListener('visibilitychange', tick); window.addEventListener('focus', tick); tick();
+          try{
+            const h = etag ? {'If-None-Match': etag} : {};
+            const res = await fetch(STATUS_ENDPOINT, {headers:h, cache:'no-store'});
+            if (res.status === 304) return last;
+            if (!res.ok) return null;
+            etag = res.headers.get('ETag') || '';
+            const j = await res.json();
+            last = {t:!!j.twitch,k:!!j.kick};
+            return last;
+          }catch{return null}
+        }
+        async function tick(){
+          clearTimeout(timer);
+          const r = await fetchStatus();
+          if (r) applyLive(r.t, r.k);
+          const ttl = (document.visibilityState==='visible'?TTL_VISIBLE:TTL_HIDDEN) * ((state.twitchLive||state.kickLive)?0.6:1);
+          timer = setTimeout(tick, Math.max(6000, ttl));
+        }
+        document.addEventListener('visibilitychange', tick);
+        window.addEventListener('focus', tick);
+        tick();
       }
     })();
   </script>
