@@ -106,7 +106,7 @@
     .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
     .error-box.show{display:flex}
 
-    /* Ambient background canvas (local) */
+    /* Ambient background canvas (Pipeline) */
     main{position:relative}
     .content--canvas{position:absolute;left:0;right:0;bottom:0;top:calc(-1 * var(--header-h));z-index:0;pointer-events:none;isolation:isolate;
       -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%);
@@ -499,129 +499,263 @@
   })();
 </script>
 
-<!-- Local Pipeline (no CDN) -->
+<!-- Ambient Pipeline Background (Codrops-inspired) -->
 <script>
+/*!
+ * Ambient Canvas Backgrounds — "Pipeline"
+ * Adapted for winzi.stream
+ * Original concept by Sean Free / Codrops
+ * Repo: https://github.com/crnacura/AmbientCanvasBackgrounds
+ */
 (function(){
-  const wrap = document.querySelector('.content--canvas');
-  if(!wrap) return;
-  const c = document.createElement('canvas');
-  wrap.appendChild(c);
-  const ctx = c.getContext('2d', {alpha:true, desynchronized:true});
-  let dpr = Math.min(window.devicePixelRatio||1, 2);
-  let w=0, h=0;
+  const host = document.querySelector('.content--canvas');
+  if (!host) return;
 
+  // Onscreen & offscreen canvases
+  const canvas = {
+    a: document.createElement('canvas'), // offscreen work canvas
+    b: document.createElement('canvas')  // onscreen display canvas
+  };
+  const ctx = {
+    a: canvas.a.getContext('2d', { alpha: true, desynchronized: true }),
+    b: canvas.b.getContext('2d', { alpha: true, desynchronized: true })
+  };
+  host.innerHTML = '';
+  host.appendChild(canvas.b);
+
+  // Device pixel ratio
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+  const TAU = Math.PI * 2;
+  const TO_RAD = Math.PI / 180;
+  const rand = (min, max) => min + Math.random() * (max - min);
+  const round = (n) => Math.round(n);
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  // ---- COLORS (take from your current canvas config) ----
+  const COLOR_A = '#7701fe';
+  const COLOR_B = '#e70d84';
+
+  function hexToRgb(hex){
+    const s = hex.replace('#','');
+    const b = s.length===3 ? s.split('').map(c=>c+c).join('') : s;
+    const n = parseInt(b, 16);
+    return { r:(n>>16)&255, g:(n>>8)&255, b:n&255 };
+  }
+  const RGB_A = hexToRgb(COLOR_A);
+  const RGB_B = hexToRgb(COLOR_B);
+  const mix = (a,b,t)=> Math.round(a + (b-a)*t);
+
+  function lerpColor(t){
+    const r = mix(RGB_A.r, RGB_B.r, t);
+    const g = mix(RGB_A.g, RGB_B.g, t);
+    const b = mix(RGB_A.b, RGB_B.b, t);
+    return `rgba(${r},${g},${b},1)`;
+  }
+
+  // ---- CONFIG (close to Codrops "Pipeline" with fade-out) ----
   const CFG = {
-    grid: 56,
-    pipes: 10,
-    speed: 180,             // px/sec
-    turnProb: 0.35,         // chance to turn at nodes
-    maxSegments: 16,        // length of trail in segments
-    thickness: [1.2, 2.2],  // stroke width range
-    glow: 6,               // shadowBlur
-    colors: ['#7701fe','#e70d84'],
-    alpha: 0.55
+    pipeCount: 28,
+    turnCount: 8,
+    turnChanceRange: 58,
+    speed: { base: 0.55, range: 1.0 },
+    ttl: { base: 120, range: 320 },
+    width: { base: 1.6, range: 3.8 },
+    fadeTrail: 0.045,
+    glow: 8,
+    margin: 24
   };
 
-  function resize(){
-    const cw = wrap.clientWidth || window.innerWidth;
-    const ch = wrap.clientHeight || window.innerHeight;
-    w = cw; h = ch;
-    c.width = Math.max(1, Math.round(cw*dpr));
-    c.height= Math.max(1, Math.round(ch*dpr));
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-  }
-  new ResizeObserver(resize).observe(wrap); resize();
-
-  const DIRS = {E:[1,0], W:[-1,0], N:[0,-1], S:[0,1]};
-  const ORTHO = {E:['N','S'], W:['N','S'], N:['E','W'], S:['E','W']};
-  const ALL = Object.keys(DIRS);
-  const rand = (a,b)=> a + Math.random()*(b-a);
-  const pick = arr => arr[(Math.random()*arr.length)|0];
-
-  class Pipe{
-    constructor(){ this.reset(true); }
-    reset(random=true){
-      const g=CFG.grid; const cols=Math.max(1,Math.floor(w/g)); const rows=Math.max(1,Math.floor(h/g));
-      const cx = random ? (Math.random()*cols|0) : (cols/2|0);
-      const cy = random ? (Math.random()*rows|0) : (rows/2|0);
-      this.dir = pick(ALL);
-      this.head = {x: cx*g+g/2, y: cy*g+g/2};
-      this.points = [{...this.head}];
-      this.target = this.nextTarget(this.dir);
-      this.thickness = rand(CFG.thickness[0], CFG.thickness[1]);
-      this.colorA = CFG.colors[0];
-      this.colorB = CFG.colors[1];
-    }
-    nextTarget(dir){
-      const g=CFG.grid; const [dx,dy]=DIRS[dir];
-      let nx=this.head.x + dx*g, ny=this.head.y + dy*g;
-      if (nx < 0) nx = w - g/2; if (nx > w) nx = g/2;
-      if (ny < 0) ny = h - g/2; if (ny > h) ny = g/2;
-      return {x:nx,y:ny};
-    }
-    maybeTurn(){
-      const cands = ORTHO[this.dir];
-      // edge bias
-      const bias=[]; const x=this.head.x, y=this.head.y;
-      if (x < w*0.2) bias.push('E'); if (x > w*0.8) bias.push('W');
-      if (y < h*0.2) bias.push('S'); if (y > h*0.8) bias.push('N');
-      let dir=this.dir;
-      if (Math.random() < CFG.turnProb) dir = pick(cands);
-      else if (bias.length){ const b=pick(bias); if (cands.includes(b)) dir=b; }
-      this.dir = dir;
-    }
-    advance(dist){
-      while(dist>0){
-        const dx=this.target.x-this.head.x, dy=this.target.y-this.head.y;
-        const rem=Math.hypot(dx,dy);
-        if (rem <= dist){
-          this.head.x=this.target.x; this.head.y=this.target.y;
-          this.points.push({...this.head});
-          if (this.points.length > CFG.maxSegments) this.points.shift();
-          this.maybeTurn();
-          this.target=this.nextTarget(this.dir);
-          dist -= rem;
-        } else {
-          const t=dist/rem; this.head.x+=dx*t; this.head.y+=dy*t; dist=0;
-        }
-      }
-    }
-    draw(ctx){
-      if (this.points.length<1) return;
-      ctx.lineJoin='round'; ctx.lineCap='round';
-      ctx.shadowBlur=CFG.glow; ctx.globalCompositeOperation='lighter';
-      const tail=this.points[0], head=this.head;
-      const g=ctx.createLinearGradient(tail.x, tail.y, head.x, head.y);
-      g.addColorStop(0,this.colorB); g.addColorStop(1,this.colorA);
-      ctx.strokeStyle=g; ctx.lineWidth=this.thickness;
-      ctx.beginPath(); ctx.moveTo(tail.x, tail.y);
-      for(let i=1;i<this.points.length;i++) ctx.lineTo(this.points[i].x,this.points[i].y);
-      ctx.lineTo(head.x, head.y); ctx.globalAlpha = (CFG.alpha!==undefined?CFG.alpha:1); ctx.stroke(); ctx.globalAlpha = 1;
-      ctx.shadowBlur=0; ctx.globalCompositeOperation='source-over';
-    }
-  }
-
-  let pipes = Array.from({length:CFG.pipes}, ()=> new Pipe());
-  let last = performance.now();
+  let pipes = null;
+  let tick = 0;
   let running = true;
+  let W = 0, H = 0, CX = 0, CY = 0;
 
-  function frame(now){
-    if (!running) { requestAnimationFrame(frame); return; }
-    const dt = Math.min(100, now-last)/1000; last = now;
-    // fade trails (prevents infinite stacking)
-    ctx.globalCompositeOperation='destination-out';
-    const fade = Math.min(0.14, 0.06 + dt*0.25);
-    ctx.fillStyle=`rgba(0,0,0,${fade})`;
-    ctx.fillRect(0,0,w,h);
-    ctx.globalCompositeOperation='source-over';
+  // Each pipe: [x, y, dir, speed, life, ttl, width, tint]
+  const PROP_COUNT = 8;
 
-    const dist = CFG.speed * dt;
-    for(const p of pipes){ p.advance(dist); p.draw(ctx); }
-    requestAnimationFrame(frame);
+  function resize(){
+    const { clientWidth: w, clientHeight: h } = host;
+    W = Math.max(1, w);
+    H = Math.max(1, h);
+    CX = W * 0.5;
+    CY = H * 0.5;
+
+    canvas.a.width  = Math.round(W * dpr);
+    canvas.a.height = Math.round(H * dpr);
+    canvas.b.width  = Math.round(W * dpr);
+    canvas.b.height = Math.round(H * dpr);
+
+    ctx.a.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.b.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.a.imageSmoothingEnabled = false;
+    ctx.b.imageSmoothingEnabled = true;
+
+    initPipes();
   }
-  requestAnimationFrame(frame);
 
-  document.addEventListener('visibilitychange',()=>{ running = (document.visibilityState==='visible'); });
+  function initPipes(){
+    tick = 0;
+    pipes = new Float32Array(CFG.pipeCount * PROP_COUNT);
+    for (let i = 0; i < pipes.length; i += PROP_COUNT){
+      initPipe(i);
+    }
+    ctx.a.clearRect(0,0,W,H);
+    ctx.b.clearRect(0,0,W,H);
+  }
+
+  function initPipe(i){
+    const a = CFG.width.base, b = CFG.width.range;
+    const speed = CFG.speed.base + Math.random() * CFG.speed.range;
+    const ttl   = CFG.ttl.base + Math.random() * CFG.ttl.range;
+    const width = a + Math.random() * b;
+    const dir   = rand(0, TAU);
+    const tint  = Math.random();
+
+    pipes[i]     = CX;
+    pipes[i + 1] = CY;
+    pipes[i + 2] = dir;
+    pipes[i + 3] = speed;
+    pipes[i + 4] = 0;
+    pipes[i + 5] = ttl;
+    pipes[i + 6] = width;
+    pipes[i + 7] = tint;
+  }
+
+  function checkBounds(x, y){
+    const m = CFG.margin;
+    return x > -m && x < W + m && y > -m && y < H + m;
+  }
+
+  function fadeInOut(life, ttl){
+    const t = life / ttl;
+    return Math.sin(t * Math.PI); // 0..1..0
+  }
+
+  function update(){
+    // fade trails on the work canvas (prevents stacking)
+    ctx.a.save();
+    ctx.a.globalCompositeOperation = 'destination-out';
+    ctx.a.fillStyle = `rgba(0,0,0,${clamp(CFG.fadeTrail, 0.01, 0.25)})`;
+    ctx.a.fillRect(0,0,W,H);
+    ctx.a.restore();
+
+    const turnAmount = (360 / CFG.turnCount) * TO_RAD;
+
+    for (let i = 0; i < pipes.length; i += PROP_COUNT){
+      let x = pipes[i];
+      let y = pipes[i + 1];
+      let dir = pipes[i + 2];
+      let speed = pipes[i + 3];
+      let life = pipes[i + 4];
+      const ttl = pipes[i + 5];
+      const width = pipes[i + 6];
+      const tint = pipes[i + 7];
+
+      // draw segment
+      drawPipe(x, y, life, ttl, width, tint, dir, speed);
+
+      // step forward
+      life += 1;
+      x += Math.cos(dir) * speed;
+      y += Math.sin(dir) * speed;
+
+      // occasional 45° turn on a 6px grid, like the original
+      const turnGrid = 6;
+      const canTurn = (!(round(x) % turnGrid) || !(round(y) % turnGrid));
+      const turnNow = !(tick % round(rand(CFG.turnChanceRange, CFG.turnChanceRange + 1))) && canTurn;
+      if (turnNow){
+        const bias = Math.random() < 0.5 ? -1 : 1;
+        dir += turnAmount * bias;
+      }
+
+      // recycle conditions
+      if (life > ttl || !checkBounds(x,y)){
+        initPipe(i);
+        continue;
+      }
+
+      // store back
+      pipes[i] = x; pipes[i+1] = y; pipes[i+2] = dir; pipes[i+4] = life;
+    }
+
+    // bring the work canvas onto the display canvas
+    ctx.b.save();
+    ctx.b.globalCompositeOperation = 'source-over';
+    ctx.b.fillStyle = 'rgba(0,0,0,0.04)'; // subtle overall fade
+    ctx.b.fillRect(0,0,W,H);
+    ctx.b.globalCompositeOperation = 'lighter';
+    ctx.b.drawImage(canvas.a, 0, 0);
+    ctx.b.restore();
+
+    tick++;
+  }
+
+  function drawPipe(x, y, life, ttl, width, tint, dir, speed){
+    const alpha = fadeInOut(life, ttl) * 0.9;
+    const len = speed * 2.5;
+
+    const x2 = x + Math.cos(dir) * len;
+    const y2 = y + Math.sin(dir) * len;
+
+    const g = ctx.a.createLinearGradient(x, y, x2, y2);
+    g.addColorStop(0, lerpColor(tint));
+    g.addColorStop(1, lerpColor(1 - tint));
+
+    ctx.a.save();
+    ctx.a.globalCompositeOperation = 'lighter';
+    ctx.a.lineWidth = width;
+    ctx.a.lineCap = 'round';
+    ctx.a.lineJoin = 'round';
+    ctx.a.strokeStyle = g;
+    ctx.a.shadowColor = COLOR_A;
+    ctx.a.shadowBlur = CFG.glow;
+    ctx.a.globalAlpha = alpha * 0.35; // blend with CSS opacity on canvas
+    ctx.a.beginPath();
+    ctx.a.moveTo(x, y);
+    ctx.a.lineTo(x2, y2);
+    ctx.a.stroke();
+    ctx.a.restore();
+  }
+
+  function loop(){
+    if (running) update();
+    requestAnimationFrame(loop);
+  }
+
+  const ro = new ResizeObserver(()=> resize());
+  ro.observe(host);
+  function resize(){ /* defined above */ } // placeholder for linter
+  // actual resize function is defined above; to keep order in one <script> block:
+  // (we rely on function hoisting in JS)
+  loop();
+
+  // re-define resize here (hoisted version used in code above)
+  function resize(){
+    const { clientWidth: w, clientHeight: h } = host;
+    W = Math.max(1, w);
+    H = Math.max(1, h);
+    CX = W * 0.5;
+    CY = H * 0.5;
+
+    canvas.a.width  = Math.round(W * dpr);
+    canvas.a.height = Math.round(H * dpr);
+    canvas.b.width  = Math.round(W * dpr);
+    canvas.b.height = Math.round(H * dpr);
+
+    ctx.a.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.b.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    ctx.a.imageSmoothingEnabled = false;
+    ctx.b.imageSmoothingEnabled = true;
+
+    initPipes();
+  }
+
+  document.addEventListener('visibilitychange', ()=>{
+    running = (document.visibilityState === 'visible');
+  }, {passive:true});
 })();
 </script>
 </body>
