@@ -16,6 +16,9 @@
   <!-- Twitch parents (für Embed Domain-Whitelist) -->
   <meta name="twitch-parents" content="winzi.stream,www.winzi.stream,localhost,127.0.0.1">
 
+  <!-- Twitch Embed JS-API -->
+  <script src="https://player.twitch.tv/js/embed/v1.js" defer></script>
+
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500,1,600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
@@ -80,8 +83,8 @@
     #tab-twitch[aria-selected="true"]{background:rgba(145,71,255,.15)}
     #tab-kick[aria-selected="true"]{background:rgba(0,231,1,.12)}
 
-    .player{aspect-ratio:16/9;width:100%;border:0;border-radius:calc(var(--radius) - .25rem);background:#0a0f19;opacity:0;transition:opacity .25s ease}
-    .player.show{opacity:1}
+    .player, .player-host{aspect-ratio:16/9;width:100%;border:0;border-radius:calc(var(--radius) - .25rem);background:#0a0f19;opacity:0;transition:opacity .25s ease}
+    .player.show, .player-host.show{opacity:1}
     .offline-box{display:flex;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px dashed rgba(255,255,255,.15);color:#cbd5e1;font-weight:800;letter-spacing:.02em;padding:1rem}
     .offline-box.hidden{display:none}
     .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
@@ -139,13 +142,12 @@
             </button>
           </div>
 
+          <!-- Twitch Host (JS-API rendert den Player hier hinein) -->
           <div id="panel-twitch" role="tabpanel" aria-labelledby="tab-twitch" hidden>
-            <iframe id="twitch-player" class="player"
-              allow="autoplay; fullscreen; picture-in-picture"
-              allowfullscreen
-              referrerpolicy="strict-origin-when-cross-origin"
-              loading="lazy" fetchpriority="high"></iframe>
+            <div id="twitch-host" class="player-host"></div>
           </div>
+
+          <!-- Kick bleibt iframe (Soft-Pause via about:blank) -->
           <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
             <iframe id="kick-player" class="player"
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
@@ -191,39 +193,67 @@
       const kickPanel   = document.getElementById('panel-kick');
       const offlineBox  = document.getElementById('offline-box');
       const embedErrorBox = document.getElementById('embed-error');
-      const twitchPlayer = document.getElementById('twitch-player');
-      const kickPlayer   = document.getElementById('kick-player');
       const btnTwitch = document.getElementById('btn-twitch');
       const btnKick   = document.getElementById('btn-kick');
       const heroCard  = document.getElementById('hero-card');
+      const kickIframe = document.getElementById('kick-player');
+      const twitchHost = document.getElementById('twitch-host');
 
       let state = {
         twitchLive:false, kickLive:false,
         current:'twitch',
-        twitchLoaded:false, kickLoaded:false,
         userInteracted:false,
-        heroInView:true
+        heroInView:true,
+        kickSavedSrc:"",   // für Soft-Pause
       };
 
-      // Helpers
+      let twitchPlayer = null;
+
       function canEmbedTwitch(){
         const proto = location.protocol, host = location.hostname;
         if (proto === 'https:') return true;
         if (proto === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
         return false; // file:// blockiert
       }
-      function twitchURL(muted){
-        const u = new URL('https://player.twitch.tv/');
-        u.searchParams.set('channel','winzilp');
-        const parentsMeta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
-        const parents = parentsMeta.split(',').map(s=>s.trim()).filter(Boolean);
-        const h = location.hostname; if (h) parents.push(h);
-        ['localhost','127.0.0.1'].forEach(p=>{ if(!parents.includes(p)) parents.push(p); });
-        parents.forEach(p=>u.searchParams.append('parent',p));
-        u.searchParams.set('autoplay','true');
-        u.searchParams.set('muted', String(!!muted));
-        return u.toString();
+      function twitchParents(){
+        const meta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
+        const p = meta.split(',').map(s=>s.trim()).filter(Boolean);
+        const h = location.hostname; if (h && !p.includes(h)) p.push(h);
+        ['localhost','127.0.0.1'].forEach(d=>{ if(!p.includes(d)) p.push(d); });
+        return p;
       }
+      function initTwitch(muted){
+        if (!canEmbedTwitch()) return;
+        if (!window.Twitch || !window.Twitch.Player) return; // Script noch nicht geladen
+        if (!twitchPlayer){
+          twitchPlayer = new Twitch.Player('twitch-host', {
+            channel: 'winzilp',
+            parent: twitchParents(),
+            autoplay: true,
+            muted: !!muted,
+            // height/width via CSS (host div hat aspect-ratio)
+          });
+          // optisches Fade-in wenn bereit
+          twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
+            twitchHost.classList.add('show');
+          });
+        } else {
+          try { twitchPlayer.setMuted(!!muted); } catch(e){}
+        }
+      }
+      function playTwitch(withAudio){
+        if (!twitchPlayer) { initTwitch(!withAudio); }
+        try {
+          if (twitchPlayer){
+            twitchPlayer.setMuted(!withAudio);
+            twitchPlayer.play();
+          }
+        } catch(e){}
+      }
+      function pauseTwitch(){
+        try { twitchPlayer && twitchPlayer.pause(); } catch(e){}
+      }
+
       function kickURL(muted){
         const u = new URL('https://player.kick.com/winzi');
         u.searchParams.set('autoplay','true');
@@ -231,23 +261,24 @@
         u.searchParams.set('playsinline','1');
         return u.toString();
       }
-      function stop(which){
-        if (which==='twitch' && state.twitchLoaded){ twitchPlayer.removeAttribute('src'); state.twitchLoaded=false; }
-        if (which==='kick'   && state.kickLoaded){   kickPlayer.removeAttribute('src');   state.kickLoaded=false; }
-      }
-      function ensureSrc(which, muted){
-        if (which==='twitch'){
-          if (!canEmbedTwitch()) { state.twitchLoaded = true; return; }
-          const next = twitchURL(muted);
-          if (!state.twitchLoaded || twitchPlayer.src !== next){
-            twitchPlayer.src = next; state.twitchLoaded = true;
-          }
-        } else if (which==='kick'){
-          const next = kickURL(muted);
-          if (!state.kickLoaded || kickPlayer.src !== next){
-            kickPlayer.src = next; state.kickLoaded = true;
-          }
+      function ensureKick(withAudio){
+        const want = kickURL(!withAudio ? true : false); // Audio nur wenn erlaubt
+        if (!state.kickSavedSrc) state.kickSavedSrc = want;
+        if (kickIframe.src !== want && kickIframe.src !== 'about:blank') {
+          // falls schon läuft, aber falsche Mute-Einstellung → umschalten
+          kickIframe.src = want;
         }
+        if (kickIframe.src === '' || kickIframe.src === 'about:blank') {
+          kickIframe.src = state.kickSavedSrc || want;
+        }
+        requestAnimationFrame(()=> kickIframe.classList.add('show'));
+      }
+      function pauseKick(){
+        // Soft-Pause: aktuelle URL merken, dann about:blank setzen
+        if (kickIframe.src && kickIframe.src !== 'about:blank') {
+          state.kickSavedSrc = kickIframe.src;
+        }
+        try { kickIframe.src = 'about:blank'; } catch(e){}
       }
 
       function render(){
@@ -268,21 +299,24 @@
         const showT = (state.current === 'twitch' && state.twitchLive && state.heroInView);
         const showK = (state.current === 'kick'   && state.kickLive   && state.heroInView);
 
-        // Panels sichtbar/unsichtbar
         twitchPanel.hidden = !showT;
         kickPanel.hidden   = !showK;
-        twitchPlayer.classList.toggle('show', showT && canEmbedTwitch());
-        kickPlayer.classList.toggle('show', showK);
 
-        // Inaktive Player stoppen (kein Bild/Ton im Hintergrund)
-        if (!showT) stop('twitch');
-        if (!showK) stop('kick');
+        // Sichtbarkeits-/Audio-Regel
+        const allowAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
 
-        // Aktiven Player laden: Audio nur, wenn User interagiert hat, Seite sichtbar ist und Hero im Viewport
-        const canPlayWithAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
+        if (showT && canEmbedTwitch()) {
+          initTwitch(!allowAudio);
+          playTwitch(allowAudio);
+        } else {
+          pauseTwitch();
+        }
 
-        if (showT && canEmbedTwitch()) ensureSrc('twitch', !canPlayWithAudio);
-        if (showK) ensureSrc('kick', !canPlayWithAudio);
+        if (showK) {
+          ensureKick(allowAudio);
+        } else {
+          pauseKick();
+        }
 
         // Offline-Anzeige
         const noOneLive = !state.twitchLive && !state.kickLive;
@@ -295,6 +329,10 @@
         // ARIA
         twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
         kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
+
+        // Optik
+        if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
+        if (showK) kickIframe.classList.add('show'); else kickIframe.classList.remove('show');
       }
 
       function show(which){
@@ -303,28 +341,27 @@
         state.current = which; render();
       }
 
-      // Events: Tabklick = User Interaktion → Audio darf
+      // User-Interaktion → Audio darf
       twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
       kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
-      // Klick ins Player-Areal zählt auch als Interaktion
       heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
 
-      // Sichtbarkeit (Tab) → wenn Seite versteckt wird, stoppen
+      // Tab/Seite nicht sichtbar → pausieren
       document.addEventListener('visibilitychange', ()=>{
-        if (document.visibilityState !== 'visible'){ stop('twitch'); stop('kick'); }
+        if (document.visibilityState !== 'visible'){ pauseTwitch(); pauseKick(); }
         render();
       });
 
-      // Viewport beobachten – wenn Hero nicht sichtbar, stoppen
+      // Hero im Viewport?
       const io = new IntersectionObserver((entries)=>{
         const e = entries[0];
         state.heroInView = e && e.isIntersecting && e.intersectionRatio >= 0.5;
-        if (!state.heroInView){ stop('twitch'); stop('kick'); }
+        if (!state.heroInView){ pauseTwitch(); pauseKick(); }
         render();
       }, { threshold:[0,0.5,1], rootMargin:"0px" });
       io.observe(heroCard);
 
-      // Initial OFFLINE
+      // Initial
       render();
 
       // Live-Status (SSE → Fallback Polling)
@@ -342,7 +379,7 @@
       function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
 
       (function initLive(){
-        // Dev-Simulation: ?live=none|twitch|kick|both
+        // Dev: ?live=none|twitch|kick|both
         const liveParam = new URLSearchParams(location.search).get('live');
         if (liveParam) {
           const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
