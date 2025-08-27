@@ -532,7 +532,7 @@
   const round = (n) => Math.round(n);
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
 
-  // ---- COLORS (take from your current canvas config) ----
+  // ---- COLORS (deine Farbwerte) ----
   const COLOR_A = '#7701fe';
   const COLOR_B = '#e70d84';
 
@@ -553,7 +553,7 @@
     return `rgba(${r},${g},${b},1)`;
   }
 
-  // ---- CONFIG (close to Codrops "Pipeline" with fade-out) ----
+  // ---- CONFIG (Pipeline + sanftes Fade-Out) ----
   const CFG = {
     pipeCount: 28,
     turnCount: 8,
@@ -566,6 +566,7 @@
     margin: 24
   };
 
+  // State
   let pipes = null;
   let tick = 0;
   let running = true;
@@ -573,27 +574,6 @@
 
   // Each pipe: [x, y, dir, speed, life, ttl, width, tint]
   const PROP_COUNT = 8;
-
-  function resize(){
-    const { clientWidth: w, clientHeight: h } = host;
-    W = Math.max(1, w);
-    H = Math.max(1, h);
-    CX = W * 0.5;
-    CY = H * 0.5;
-
-    canvas.a.width  = Math.round(W * dpr);
-    canvas.a.height = Math.round(H * dpr);
-    canvas.b.width  = Math.round(W * dpr);
-    canvas.b.height = Math.round(H * dpr);
-
-    ctx.a.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.b.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    ctx.a.imageSmoothingEnabled = false;
-    ctx.b.imageSmoothingEnabled = true;
-
-    initPipes();
-  }
 
   function initPipes(){
     tick = 0;
@@ -634,7 +614,10 @@
   }
 
   function update(){
-    // fade trails on the work canvas (prevents stacking)
+    // Null-Guard, falls resize() noch nicht lief (Fix für "pipes is null")
+    if (!pipes || !pipes.length) return;
+
+    // fade trails auf Work-Canvas (verhindert Vollmüllen)
     ctx.a.save();
     ctx.a.globalCompositeOperation = 'destination-out';
     ctx.a.fillStyle = `rgba(0,0,0,${clamp(CFG.fadeTrail, 0.01, 0.25)})`;
@@ -661,29 +644,29 @@
       x += Math.cos(dir) * speed;
       y += Math.sin(dir) * speed;
 
-      // occasional 45° turn on a 6px grid, like the original
+      // gelegentliche 45°-Drehung auf 6px Grid
       const turnGrid = 6;
-      const canTurn = (!(round(x) % turnGrid) || !(round(y) % turnGrid));
-      const turnNow = !(tick % round(rand(CFG.turnChanceRange, CFG.turnChanceRange + 1))) && canTurn;
+      const canTurn = (!(Math.round(x) % turnGrid) || !(Math.round(y) % turnGrid));
+      const turnNow = (!(tick % Math.round(rand(CFG.turnChanceRange, CFG.turnChanceRange + 1))) && canTurn);
       if (turnNow){
         const bias = Math.random() < 0.5 ? -1 : 1;
         dir += turnAmount * bias;
       }
 
-      // recycle conditions
+      // recyceln
       if (life > ttl || !checkBounds(x,y)){
         initPipe(i);
         continue;
       }
 
-      // store back
+      // zurückschreiben
       pipes[i] = x; pipes[i+1] = y; pipes[i+2] = dir; pipes[i+4] = life;
     }
 
-    // bring the work canvas onto the display canvas
+    // Work-Canvas auf Display-Canvas übertragen (mit leichtem globalen Fade)
     ctx.b.save();
     ctx.b.globalCompositeOperation = 'source-over';
-    ctx.b.fillStyle = 'rgba(0,0,0,0.04)'; // subtle overall fade
+    ctx.b.fillStyle = 'rgba(0,0,0,0.04)';
     ctx.b.fillRect(0,0,W,H);
     ctx.b.globalCompositeOperation = 'lighter';
     ctx.b.drawImage(canvas.a, 0, 0);
@@ -711,7 +694,7 @@
     ctx.a.strokeStyle = g;
     ctx.a.shadowColor = COLOR_A;
     ctx.a.shadowBlur = CFG.glow;
-    ctx.a.globalAlpha = alpha * 0.35; // blend with CSS opacity on canvas
+    ctx.a.globalAlpha = alpha * 0.35; // zusammengesetzt mit CSS-Opacity auf dem Canvas
     ctx.a.beginPath();
     ctx.a.moveTo(x, y);
     ctx.a.lineTo(x2, y2);
@@ -724,14 +707,6 @@
     requestAnimationFrame(loop);
   }
 
-  const ro = new ResizeObserver(()=> resize());
-  ro.observe(host);
-  function resize(){ /* defined above */ } // placeholder for linter
-  // actual resize function is defined above; to keep order in one <script> block:
-  // (we rely on function hoisting in JS)
-  loop();
-
-  // re-define resize here (hoisted version used in code above)
   function resize(){
     const { clientWidth: w, clientHeight: h } = host;
     W = Math.max(1, w);
@@ -753,9 +728,23 @@
     initPipes();
   }
 
+  // WICHTIG: Gleich zu Beginn initialisieren (Fix)
+  resize();
+
+  // Auf spätere Größenänderungen reagieren
+  if ('ResizeObserver' in window){
+    const ro = new ResizeObserver(resize);
+    ro.observe(host);
+  } else {
+    window.addEventListener('resize', resize);
+  }
+
   document.addEventListener('visibilitychange', ()=>{
     running = (document.visibilityState === 'visible');
   }, {passive:true});
+
+  // Animation starten (nachdem resize() gelaufen ist)
+  requestAnimationFrame(loop);
 })();
 </script>
 </body>
