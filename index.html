@@ -9,6 +9,13 @@
   <meta name="theme-color" content="#160b22" />
   <meta name="color-scheme" content="dark light">
 
+  <!-- Social / SEO -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Winzi – Live auf Twitch & Kick">
+  <meta property="og:description" content="Komm vorbei, häng mit der Community ab und verpass keine Streams mehr – live auf Twitch & Kick.">
+  <meta property="og:url" content="https://winzi.stream">
+  <meta name="twitter:card" content="summary_large_image">
+
   <!-- Preconnect / Prefetch -->
   <link rel="preconnect" href="https://player.twitch.tv" crossorigin>
   <link rel="preconnect" href="https://static.twitchcdn.net" crossorigin>
@@ -34,114 +41,183 @@
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,500;0,600;1,400&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
   <style>
+    /* ------------------------------
+       Design Tokens
+       ------------------------------ */
     :root{
-      --bg:#120a1b; --bg-2:#1d1230; --text:#f2f3f5; --muted:#9aa0ab;
-      --kick:#00E701; --twitch:#9147ff; --card:#0f1322; --ring:rgba(255,75,209,.55);
-      --shadow:0 10px 25px rgba(0,0,0,.35); --radius:1.25rem; --radius-lg:1.5rem;
+      --bg:#0e0916; --bg-2:#1b1230; --surface:rgba(255,255,255,.06);
+      --text:#f2f3f7; --muted:#9aa0ab; --muted-2:#b6bbc6;
+      --accent-1:#a56bff; --accent-2:#ff4bd1; --accent-3:#00e701;
+      --twitch:#9147ff; --kick:#00E701;
+      --card:#0c1120; --ring:rgba(255,75,209,.55);
+      --shadow:0 12px 30px rgba(0,0,0,.38);
+      --radius:1.2rem; --radius-lg:1.5rem; --radius-xl:2rem;
       --maxw:1280px; --header-h:64px;
       --font-display:"Roboto Condensed",system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
       --font-body:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
-      scroll-behavior:smooth;
+      --gradient: radial-gradient(1000px 500px at 10% -10%, rgba(255,75,209,.28), transparent 60%),
+                  radial-gradient(800px 480px at 95% 0%, rgba(165,107,255,.20), transparent 60%),
+                  linear-gradient(180deg,var(--bg),var(--bg-2));
+      --glass: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02));
     }
-    *{box-sizing:border-box} html,body{height:100%}
+
+    /* ------------------------------
+       Reset & Base
+       ------------------------------ */
+    *,*::before,*::after{box-sizing:border-box}
+    html:focus-within{scroll-behavior:smooth}
+    html,body{height:100%}
     body{
-      margin:0;font-family:var(--font-body);color:var(--text);
-      background:
-        radial-gradient(1200px 600px at 10% -10%, rgba(255,75,209,.28), transparent 60%),
-        radial-gradient(900px 500px at 90% 10%, rgba(165,107,255,.20), transparent 60%),
-        linear-gradient(180deg,var(--bg),var(--bg-2));
-      background-attachment:fixed;line-height:1.6;
-      display:grid;grid-template-rows:auto 1fr auto;min-height:100svh;
+      margin:0; font-family:var(--font-body); color:var(--text); line-height:1.6;
+      background: var(--gradient); background-attachment:fixed;
+      display:grid; grid-template-rows:auto 1fr auto; min-height:100svh;
     }
-    header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(10px);
-      background:linear-gradient(180deg,rgba(18,10,27,.82),rgba(18,10,27,.36));
+    img,svg{vertical-align:middle}
+    a{color:inherit}
+    :focus{outline:none}
+    :focus-visible{outline:3px solid var(--ring); outline-offset:2px; border-radius:.6rem}
+    ::selection{background:rgba(165,107,255,.35)}
+
+    /* ------------------------------
+       Header / Nav
+       ------------------------------ */
+    header{position:sticky; top:0; z-index:50; backdrop-filter:saturate(140%) blur(10px);
+      background:linear-gradient(180deg,rgba(14,9,22,.92),rgba(14,9,22,.35));
       border-bottom:1px solid rgba(255,255,255,.06)}
-    .nav{max-width:var(--maxw);margin:0 auto;padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;min-height:var(--header-h)}
-    .brand{display:flex;align-items:center;text-decoration:none;color:var(--text)}
-    .brand span{font-size:1.05rem;font-weight:800;letter-spacing:.5px}
+    .nav{max-width:var(--maxw); margin:0 auto; padding:.6rem 1rem; display:flex; align-items:center; justify-content:space-between; min-height:var(--header-h)}
+    .brand{display:flex; align-items:center; gap:.65rem; text-decoration:none; color:var(--text)}
+    .brand__logo{display:grid; place-items:center; width:36px; height:36px; border-radius:.9rem;
+      background:linear-gradient(135deg, rgba(145,71,255,.25), rgba(255,75,209,.18));
+      border:1px solid rgba(255,255,255,.12); box-shadow:var(--shadow)}
+    .brand__name{font:800 1.05rem/1 var(--font-body); letter-spacing:.5px}
+    .live-indicator{display:inline-flex; align-items:center; gap:.4rem; font-weight:800; color:#fff; letter-spacing:.02em;
+      padding:.25rem .5rem; border-radius:.6rem; background:linear-gradient(135deg, #ef4444, #f97316); box-shadow:var(--shadow);
+      transform:translateZ(0); opacity:0; transition:opacity .25s ease}
+    .live-indicator[data-on="true"]{opacity:1}
+    .live-dot{width:8px; height:8px; border-radius:999px; background:#fff; box-shadow:0 0 0 4px rgba(255,255,255,.25)}
 
-    main{max-width:var(--maxw);margin:0 auto;padding:clamp(1rem,3vw,2rem) 1rem;display:grid;align-items:center;min-height:calc(100svh - var(--header-h))}
-    .hero{display:grid;gap:2rem;align-items:center;grid-template-columns:1fr 1.3fr;min-height:100%;
-      contain:content}
-    .eyebrow{font:800 .85rem/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);opacity:.85}
-    .hero h1{font-family:var(--font-display);font-size:clamp(3rem,8vw,5.4rem);line-height:1.05;margin:.2rem 0 .65rem;text-transform:uppercase;font-weight:600;font-style:italic;position:relative;transform:skewX(-8deg);color:#fff;text-shadow:0 12px 28px rgba(0,0,0,.35)}
-    .sub{color:var(--muted);max-width:55ch}
-    .cta{display:flex;gap:.5rem;margin-top:1.1rem;flex-wrap:wrap}
-    .btn{--btn-bg:var(--card);--btn-bd:rgba(255,255,255,.09);--btn-tx:var(--text);
-      display:inline-flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-radius:.9rem;border:1px solid var(--btn-bd);
-      text-decoration:none;color:var(--btn-tx);background:var(--btn-bg);box-shadow:var(--shadow);
-      transition:transform .2s ease,box-shadow .2s ease,background .2s ease,opacity .2s ease;
-      font-weight:800;text-transform:uppercase;letter-spacing:.02em;font-size:.92rem;white-space:nowrap;will-change:transform}
-    .btn:hover{transform:translateY(-2px);box-shadow:0 16px 35px rgba(0,0,0,.45)}
-    .btn:focus{outline:3px solid var(--ring);outline-offset:2px}
-    .btn .ico{width:18px;height:18px}
-    .btn .live-pill{display:none;font-size:.75rem;font-weight:800;padding:.15rem .4rem;border-radius:.5rem;background:#ef4444;color:#fff;letter-spacing:.06em}
+    /* ------------------------------
+       Layout / Hero
+       ------------------------------ */
+    main{max-width:var(--maxw); margin:0 auto; padding:clamp(1rem,3vw,2rem) 1rem; display:grid; align-items:center; min-height:calc(100svh - var(--header-h)); position:relative}
+    .hero{display:grid; gap:2rem; align-items:center; grid-template-columns:1fr 1.25fr; min-height:100%; contain:layout paint style}
+
+    .eyebrow{font:800 .85rem/1 var(--font-body); letter-spacing:.12em; text-transform:uppercase; color:var(--muted); opacity:.9}
+    .hero h1{font-family:var(--font-display); font-size:clamp(3rem,8vw,5.4rem); line-height:1.05; margin:.2rem 0 .6rem; text-transform:uppercase; font-weight:700; font-style:italic;
+      position:relative; transform:skewX(-8deg); color:#fff; text-shadow:0 12px 28px rgba(0,0,0,.35)}
+    .sub{color:var(--muted-2); max-width:58ch}
+
+    .cta{display:flex; gap:.6rem; margin-top:1.15rem; flex-wrap:wrap}
+    .btn{--btn-bg:var(--card); --btn-bd:rgba(255,255,255,.10); --btn-tx:var(--text);
+      display:inline-flex; align-items:center; gap:.55rem; padding:.65rem .95rem; border-radius:1rem; border:1px solid var(--btn-bd);
+      text-decoration:none; color:var(--btn-tx); background:var(--btn-bg); box-shadow:var(--shadow);
+      transition:transform .18s ease, box-shadow .18s ease, background .18s ease, opacity .18s ease, border-color .18s ease;
+      font-weight:800; text-transform:uppercase; letter-spacing:.02em; font-size:.95rem; white-space:nowrap; will-change:transform; touch-action:manipulation}
+    .btn:hover{transform:translateY(-2px); box-shadow:0 16px 35px rgba(0,0,0,.45)}
+    .btn:active{transform:translateY(0)}
+    .btn .ico{width:18px; height:18px}
+    .btn .live-pill{display:none; font-size:.75rem; font-weight:800; padding:.15rem .45rem; border-radius:.55rem; background:#ef4444; color:#fff; letter-spacing:.06em}
     .btn.live .live-pill{display:inline-block}
-    .btn.twitch{background:transparent;border-color:rgba(145,71,255,.55);color:var(--twitch)}
-    .btn.twitch:hover{background:var(--twitch);border-color:var(--twitch);color:#fff}
-    .btn.kick{background:transparent;border-color:rgba(0,231,1,.55);color:#5CF457}
-    .btn.kick:hover{background:var(--kick);border-color:var(--kick);color:#0b0b0b}
+    .btn.twitch{background:linear-gradient(180deg, transparent, rgba(145,71,255,.10)); border-color:rgba(145,71,255,.55); color:var(--twitch)}
+    .btn.twitch:hover{background:linear-gradient(180deg, rgba(145,71,255,.25), rgba(145,71,255,.10)); border-color:var(--twitch); color:#fff}
+    .btn.kick{background:linear-gradient(180deg, transparent, rgba(0,231,1,.10)); border-color:rgba(0,231,1,.55); color:#5CF457}
+    .btn.kick:hover{background:linear-gradient(180deg, rgba(0,231,1,.20), rgba(0,231,1,.08)); border-color:rgba(0,231,1,.85); color:#eaffea; text-shadow:0 1px 0 rgba(0,0,0,.4)}
 
-    .hero-card{position:relative;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow);backdrop-filter:saturate(120%) blur(6px);overflow:hidden;contain:content}
-    .embed-wrap{display:grid;gap:1rem}
-    .tabs{display:flex;gap:.5rem;position:relative;z-index:2;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:.25rem;scroll-snap-type:x proximity}
-    .tab-btn{appearance:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:var(--text);padding:.6rem .8rem;border-radius:.75rem;font-weight:800;cursor:pointer;display:inline-flex;align-items:center;gap:.45rem;text-transform:uppercase;letter-spacing:.02em;min-height:42px;scroll-snap-align:start}
-    .tab-btn[aria-selected="true"]{background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.32)}
-    .tab-btn.offline{opacity:.45;filter:saturate(.4) contrast(.9);cursor:not-allowed;pointer-events:none}
-    .tab-btn .mini{width:16px;height:16px;vertical-align:-3px}
-    .tab-btn .live-dot{display:none;width:8px;height:8px;border-radius:999px;background:#ef4444;box-shadow:0 0 0 4px rgba(239,68,68,.2)}
+    /* Card & Tabs */
+    .hero-card{position:relative; background:var(--glass); border:1px solid rgba(255,255,255,.10); border-radius:var(--radius-xl);
+      padding:1.15rem; box-shadow:var(--shadow); backdrop-filter:saturate(120%) blur(8px); overflow:hidden; contain:content}
+    .embed-wrap{display:grid; gap:1rem}
+    .tabs{display:flex; gap:.5rem; position:relative; z-index:2; overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:.25rem; scroll-snap-type:x proximity}
+    .tab-btn{appearance:none; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); color:var(--text); padding:.6rem .85rem; border-radius:.85rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:.48rem; text-transform:uppercase; letter-spacing:.02em; min-height:42px; scroll-snap-align:start}
+    .tab-btn.online[aria-selected="true"]{background:rgba(255,255,255,.16); border-color:rgba(255,255,255,.35)}
+    .tab-btn.offline{opacity:1; color:rgba(255,255,255,.62); background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.14); filter:none; cursor:not-allowed; pointer-events:none}
+    .tab-btn.offline .mini{opacity:.9}
+    .tabs .tab-btn.offline .live-dot{display:none}
+    .tab-btn .mini{width:16px; height:16px; vertical-align:-3px}
+    .tab-btn .live-dot{display:none; width:8px; height:8px; border-radius:999px; background:#ef4444; box-shadow:0 0 0 4px rgba(239,68,68,.22)}
     .tab-btn.online .live-dot{display:inline-block}
     #tab-twitch.online{border-color:rgba(145,71,255,.55)}
     #tab-kick.online{border-color:rgba(0,231,1,.55)}
-    #tab-twitch[aria-selected="true"]{background:rgba(145,71,255,.15)}
-    #tab-kick[aria-selected="true"]{background:rgba(0,231,1,.12)}
+    #tab-twitch.online[aria-selected="true"]{background:rgba(145,71,255,.15)}
+    #tab-kick.online[aria-selected="true"]{background:rgba(0,231,1,.12)}
 
-    .player,.player-host{aspect-ratio:16/9;width:100%;border:0;border-radius:calc(var(--radius) - .25rem);background:#0a0f19;opacity:0;transition:opacity .2s ease;position:relative;overflow:hidden;display:block}
+    .player,.player-host{aspect-ratio:16/9; width:100%; border:0; border-radius:calc(var(--radius) - .25rem); background:#0a0f19; opacity:0; transition:opacity .2s ease; position:relative; overflow:hidden; display:block}
     .player.show,.player-host.show{opacity:1}
     #twitch-host{position:relative}
-    #twitch-host iframe{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border:0 !important;border-radius:inherit;display:block}
+    #twitch-host iframe{position:absolute !important; inset:0 !important; width:100% !important; height:100% !important; border:0 !important; border-radius:inherit; display:block}
 
-    .offline-box{display:flex;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px dashed rgba(255,255,255,.15);color:#cbd5e1;font-weight:800;letter-spacing:.02em;padding:1rem}
+    .offline-box{display:flex; align-items:center; justify-content:center; gap:.75rem; text-align:center; flex-direction:column; aspect-ratio:16/9; background:#0a0f19; border-radius:calc(var(--radius) - .25rem); border:1px dashed rgba(255,255,255,.18); color:#cbd5e1; font-weight:800; letter-spacing:.02em; padding:1rem}
     .offline-box.hidden{display:none}
-    .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
+    .error-box{display:none; align-items:center; justify-content:center; gap:.75rem; text-align:center; flex-direction:column; aspect-ratio:16/9; background:#0a0f19; border-radius:calc(var(--radius) - .25rem); border:1px solid rgba(239,68,68,.35); color:#fecaca; font-weight:800; letter-spacing:.02em; padding:1rem}
     .error-box.show{display:flex}
 
     /* Ambient background canvas (local) */
-    main{position:relative}
-    .content--canvas{position:absolute;left:0;right:0;bottom:0;top:calc(-1 * var(--header-h));z-index:0;pointer-events:none;isolation:isolate;
+    .content--canvas{position:absolute; left:0; right:0; bottom:0; top:calc(-1 * var(--header-h)); z-index:0; pointer-events:none; isolation:isolate;
       -webkit-mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%);
       mask-image:linear-gradient(to bottom, rgba(0,0,0,1) 72%, rgba(0,0,0,0) 100%);
     }
-    .content--canvas canvas{width:100%;height:100%;opacity:.10;mix-blend-mode:screen;filter:saturate(115%)}
+    .content--canvas canvas{width:100%; height:100%; opacity:.10; mix-blend-mode:screen; filter:saturate(115%)}
 
     /* Footer */
     footer{position:relative}
-    .footer-inner{max-width:var(--maxw);margin:0 auto;padding:1.25rem 1rem 2rem;color:var(--muted);font-size:.95rem}
-    .footer-top{display:grid;grid-template-columns:repeat(2,minmax(0,max-content));justify-content:center;justify-items:center;gap:4rem;text-align:center}
-    .footer-links{display:flex;flex-direction:column;gap:.25rem;align-items:center}
-    .footer-links a{color:var(--muted);text-decoration:none;font-weight:500;opacity:.9}
+    .footer-inner{max-width:var(--maxw); margin:0 auto; padding:1.25rem 1rem calc(2rem + env(safe-area-inset-bottom)); color:var(--muted); font-size:.95rem}
+    .footer-top{display:grid; grid-template-columns:repeat(2,minmax(0,max-content)); justify-content:center; justify-items:center; gap:4rem; text-align:center}
+    .footer-links{display:flex; flex-direction:column; gap:.25rem; align-items:center}
+    .footer-links a{color:var(--muted); text-decoration:none; font-weight:500; opacity:.95}
 
-    .footer-col{display:flex;flex-direction:column;align-items:center;text-align:center}
-    .footer-col h4{margin:0 0 .35rem;font-size:.95rem;letter-spacing:0;text-transform:none;color:var(--muted);opacity:1;font-weight:500}
+    .footer-col{display:flex; flex-direction:column; align-items:center; text-align:center}
+    .footer-col h4{margin:0 0 .35rem; font-size:.95rem; letter-spacing:0; text-transform:none; color:var(--muted); opacity:1; font-weight:600}
 
-    /* Vollbreite Trenner (echte DOM-Elemente) */
-    .bleed-line{position:relative;left:50%;margin-left:-50vw;width:100vw;height:1px;background:rgba(255,255,255,.08);pointer-events:none}
+    .bleed-line{position:relative; left:50%; margin-left:-50vw; width:100vw; height:1px; background:rgba(255,255,255,.08); pointer-events:none}
     .bleed-line.subtle{background:rgba(255,255,255,.06)}
 
-    .footer-bottom{margin-top:.75rem;padding-top:.6rem;font-size:.85rem;display:flex;justify-content:center;align-items:center;gap:.35rem;text-align:center;white-space:nowrap}
+    .footer-bottom{margin-top:.75rem; padding-top:.6rem; font-size:.85rem; display:flex; justify-content:center; align-items:center; gap:.35rem; text-align:center; white-space:nowrap}
 
-    @media (max-width:1024px){.hero{grid-template-columns:1fr}.cta{justify-content:center}}
-    @media (max-width:640px){.footer-top{grid-template-columns:1fr;justify-items:center}}
-    @media (max-width:560px){.btn{width:100%;justify-content:center}}
+    /* Accessibility helpers */
+    .sr-only{position:absolute !important; width:1px !important; height:1px !important; padding:0 !important; margin:-1px !important; overflow:hidden !important; clip:rect(0,0,0,0) !important; white-space:nowrap !important; border:0 !important}
+    .skip-link{position:absolute; top:-40px; left:1rem; background:#111827; color:#fff; padding:.5rem .75rem; border-radius:.5rem; border:1px solid rgba(255,255,255,.25); transition:top .2s ease; z-index:60}
+    .skip-link:focus{top:.75rem}
+
+    /* Mobile-first improvements & tap targets */
+    .btn{min-height:48px}
+    @media (hover: none){ .btn:hover{transform:none; box-shadow:var(--shadow);} }
+    /* nicer edge fade on overflow tabs */
+    .tabs{ -webkit-mask-image:linear-gradient(to right, #000 0, #000 calc(100% - 12px), transparent 100%); mask-image:linear-gradient(to right, #000 0, #000 calc(100% - 12px), transparent 100%); }
+
+    @media (max-width:480px){
+      main{padding:clamp(.75rem,3.5vw,1.25rem) .9rem}
+      .hero{gap:1.25rem}
+      .hero h1{font-size:clamp(2.25rem, 11vw, 3.25rem)}
+      .hero-card{padding:.9rem; border-radius:1.25rem}
+      .cta{gap:.5rem}
+      .btn{width:100%; font-size:1rem; padding:.85rem 1rem}
+    }
+
+    /* Responsive */
+    @media (max-width:1024px){.hero{grid-template-columns:1fr} .cta{justify-content:center}}
+    @media (max-width:640px){.footer-top{grid-template-columns:1fr; justify-items:center}}
+    @media (max-width:560px){.btn{width:100%; justify-content:center}}
     @media (prefers-reduced-motion: reduce){.btn,.player,.player-host{transition:none}}
+
   </style>
 </head>
 <body>
+<a class="skip-link" href="#main">Zum Inhalt springen</a>
 <header>
-  <div class="nav"><a class="brand" href="#top"><span>WINZI</span></a></div>
+  <div class="nav">
+    <a class="brand" href="#top">
+      <span class="brand__logo" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-twitch"/></svg>
+      </span>
+      <span class="brand__name">WINZI</span>
+    </a>
+    <span id="live-indicator" class="live-indicator" aria-live="polite" aria-atomic="true" hidden>
+      <span class="live-dot" aria-hidden="true"></span> LIVE
+    </span>
+  </div>
 </header>
 
-<main id="top">
+<main id="main">
   <div class="content--canvas" aria-hidden="true"></div>
   <section class="hero" aria-labelledby="hero-title">
     <div>
@@ -150,44 +226,45 @@
       <p class="sub">Komm vorbei, häng mit der Community ab und verpass keine Streams mehr – live auf <strong>Twitch</strong> &amp; <strong>Kick</strong>.</p>
       <div class="cta">
         <a id="btn-twitch" class="btn twitch" target="_blank" rel="noopener" href="https://twitch.tv/winzilp">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch folgen <span class="live-pill">LIVE</span>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-twitch"/></svg> Auf Twitch folgen <span class="live-pill">LIVE</span>
         </a>
         <a id="btn-kick" class="btn kick" target="_blank" rel="noopener" href="https://kick.com/winzi">
-          <svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick folgen <span class="live-pill">LIVE</span>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-kick"/></svg> Auf Kick folgen <span class="live-pill">LIVE</span>
         </a>
       </div>
     </div>
 
     <div class="hero-card" id="hero-card">
       <div class="embed-wrap">
-        <div class="tabs" role="tablist">
-          <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
-            <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
+        <div class="tabs" role="tablist" aria-label="Stream Tabs">
+          <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled tabindex="-1">
+            <svg class="mini" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
           </button>
-          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
-            <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
+          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled tabindex="-1">
+            <svg class="mini" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
           </button>
         </div>
 
         <div id="panel-twitch" role="tabpanel" aria-labelledby="tab-twitch" hidden>
-          <div id="twitch-host" class="player-host"></div>
+          <div id="twitch-host" class="player-host" aria-live="polite"></div>
         </div>
 
         <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
           <iframe id="kick-player" class="player"
+            title="Kick Player"
             allow="autoplay; fullscreen; picture-in-picture"
             allowfullscreen
             referrerpolicy="strict-origin-when-cross-origin"
             loading="lazy" fetchpriority="high"></iframe>
         </div>
 
-        <div id="offline-box" class="offline-box">Currently Offline :c</div>
-        <div id="embed-error" class="error-box">
+        <div id="offline-box" class="offline-box" aria-live="polite">Derzeit offline</div>
+        <div id="embed-error" class="error-box" role="alert">
           <div>Der Twitch-Player kann in einer lokalen Datei (file://) nicht eingebettet werden.</div>
           <div style="font-weight:600">Öffne den Stream extern oder starte die Seite über http://localhost:</div>
           <div class="cta" style="margin-top:.5rem">
-            <a class="btn twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch ansehen</a>
-            <a class="btn kick" href="https://kick.com/winzi" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick ansehen</a>
+            <a class="btn twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-twitch"/></svg> Auf Twitch ansehen</a>
+            <a class="btn kick" href="https://kick.com/winzi" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><use href="#ico-kick"/></svg> Auf Kick ansehen</a>
           </div>
         </div>
       </div>
@@ -231,7 +308,12 @@
 </svg>
 
 <script>
+  // Year
   document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Title utility to reflect live state
+  const ORIGINAL_TITLE = document.title;
+  function setLiveTitle(isLive){ document.title = isLive ? '● LIVE – Winzi' : ORIGINAL_TITLE; }
 
   (function setupEmbeds(){
     const twitchBtn = document.getElementById('tab-twitch');
@@ -244,6 +326,7 @@
     const btnKick   = document.getElementById('btn-kick');
     const heroCard  = document.getElementById('hero-card');
     const twitchHost = document.getElementById('twitch-host');
+    const liveIndicator = document.getElementById('live-indicator');
 
     let state = {
       twitchLive:false, kickLive:false,
@@ -258,11 +341,13 @@
     let es = null;
     let pollingTimer = null;
 
+    // Helpers
     const getKickEl = () => document.getElementById('kick-player');
     const buildKickEl = () => {
       const el = document.createElement('iframe');
       el.id = 'kick-player';
       el.className = 'player';
+      el.title = 'Kick Player';
       el.allowFullscreen = true;
       el.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
       el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
@@ -344,12 +429,18 @@
       try { el.src = 'about:blank'; } catch(e){}
       setTimeout(()=>{
         if (el.isConnected) el.remove();
-        if (!getKickEl()) kickPanel.appendChild(buildKickEl()); // Placeholder
+        if (!getKickEl()) kickPanel.appendChild(buildKickEl()); // placeholder keeps layout
       },0);
     }
 
     let rafId=null;
     function scheduleRender(){ if (rafId) return; rafId = requestAnimationFrame(()=>{ rafId=null; render(); }); }
+
+    function setTabsA11y(){
+      const isT = state.current === 'twitch';
+      twitchBtn.tabIndex = (twitchBtn.disabled? -1 : (isT? 0 : -1));
+      kickBtn.tabIndex   = (kickBtn.disabled? -1 : (!isT? 0 : -1));
+    }
 
     function render(){
       const tOff = !state.twitchLive, kOff = !state.kickLive;
@@ -381,8 +472,8 @@
       const showEmbedError = showT && !canEmbedTwitch();
       embedErrorBox.classList.toggle('show', showEmbedError);
 
-      twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
-      kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
+      twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch' && state.twitchLive));
+      kickBtn.setAttribute('aria-selected', String(state.current === 'kick' && state.kickLive));
 
       if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
       const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
@@ -392,6 +483,16 @@
         if (el && el.src && !el.src.startsWith('about:')) pauseKick();
       }
       if (twitchRO && !showT){ try{ twitchRO.disconnect(); twitchRO=null; }catch(e){} }
+
+      // Live indicator + Title
+      const isLive = (state.twitchLive || state.kickLive);
+      setLiveTitle(isLive);
+      if (liveIndicator){
+        liveIndicator.hidden = !isLive;
+        liveIndicator.setAttribute('data-on', String(isLive));
+      }
+
+      setTabsA11y();
     }
 
     function show(which){
@@ -400,9 +501,22 @@
       state.current = which; scheduleRender();
     }
 
+    // Mouse / Touch
     twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); }, {passive:true});
     kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  }, {passive:true});
     heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; }, {passive:true});
+
+    // Keyboard navigation for tabs
+    function onTabKeydown(e){
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft'){
+        e.preventDefault();
+        if (e.currentTarget === twitchBtn && !kickBtn.disabled && state.kickLive){ kickBtn.focus(); show('kick'); return; }
+        if (e.currentTarget === kickBtn && !twitchBtn.disabled && state.twitchLive){ twitchBtn.focus(); show('twitch'); return; }
+      }
+      if (e.key === 'Enter' || e.key === ' '){ e.preventDefault(); (e.currentTarget === twitchBtn ? show('twitch') : show('kick')); }
+    }
+    twitchBtn.addEventListener('keydown', onTabKeydown);
+    kickBtn.addEventListener('keydown', onTabKeydown);
 
     document.addEventListener('visibilitychange', ()=>{
       if (document.visibilityState !== 'visible'){ pauseTwitch(); pauseKick(); stopSSE(); }
@@ -419,7 +533,6 @@
     }, { threshold:[0,0.5,1], rootMargin:"0px" });
     io.observe(heroCard);
 
-    document.getElementById('year').textContent = new Date().getFullYear();
     render();
 
     const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
@@ -510,14 +623,16 @@
   let dpr = Math.min(window.devicePixelRatio||1, 2);
   let w=0, h=0;
 
+  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   const CFG = {
     grid: 56,
-    pipes: 10,
-    speed: 180,             // px/sec
-    turnProb: 0.35,         // chance to turn at nodes
-    maxSegments: 16,        // length of trail in segments
-    thickness: [1.2, 2.2],  // stroke width range
-    glow: 6,               // shadowBlur
+    pipes: prefersReduced ? 0 : 10,
+    speed: 180,
+    turnProb: 0.35,
+    maxSegments: 16,
+    thickness: [1.2, 2.2],
+    glow: 6,
     colors: ['#7701fe','#e70d84'],
     alpha: 0.55
   };
@@ -531,6 +646,8 @@
     ctx.setTransform(dpr,0,0,dpr,0,0);
   }
   new ResizeObserver(resize).observe(wrap); resize();
+
+  if (CFG.pipes === 0) return; // respect reduced motion
 
   const DIRS = {E:[1,0], W:[-1,0], N:[0,-1], S:[0,1]};
   const ORTHO = {E:['N','S'], W:['N','S'], N:['E','W'], S:['E','W']};
@@ -561,7 +678,6 @@
     }
     maybeTurn(){
       const cands = ORTHO[this.dir];
-      // edge bias
       const bias=[]; const x=this.head.x, y=this.head.y;
       if (x < w*0.2) bias.push('E'); if (x > w*0.8) bias.push('W');
       if (y < h*0.2) bias.push('S'); if (y > h*0.8) bias.push('N');
@@ -608,7 +724,6 @@
   function frame(now){
     if (!running) { requestAnimationFrame(frame); return; }
     const dt = Math.min(100, now-last)/1000; last = now;
-    // fade trails (prevents infinite stacking)
     ctx.globalCompositeOperation='destination-out';
     const fade = Math.min(0.14, 0.06 + dt*0.25);
     ctx.fillStyle=`rgba(0,0,0,${fade})`;
