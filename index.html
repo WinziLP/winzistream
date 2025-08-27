@@ -107,21 +107,23 @@
     .error-box.show{display:flex}
 
     .site-footer{max-width:var(--maxw);margin:2rem auto 1rem;padding:1.25rem 1rem 2rem;color:var(--muted);position:relative;font-size:.95rem;content-visibility:auto;contain-intrinsic-size: 800px; overflow:visible}
-    /* FULL-BLEED Linien über gesamte Bildschirmbreite */
-    .site-footer::before{
-      content:""; position:absolute; top:0;
-      left:calc(50% - 50vw); width:100vw; height:1px;
-      background:rgba(255,255,255,.08); pointer-events:none;
-    }
     .footer-top{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
     .footer-links{display:flex;flex-direction:column;gap:.25rem}
     .footer-links a{color:var(--muted);text-decoration:none;font-weight:500;opacity:.9}
-    .footer-bottom{margin-top:.75rem;padding-top:.6rem;font-size:.85rem;text-align:center;position:relative}
-    .footer-bottom::before{
-      content:""; position:absolute; top:0;
-      left:calc(50% - 50vw); width:100vw; height:1px;
-      background:rgba(255,255,255,.06); pointer-events:none;
+
+    /* Vollbreite Trenner (echte DOM-Elemente) */
+    .bleed-line{
+      position:relative;
+      left:50%;
+      margin-left:-50vw;   /* zentriert am Viewport */
+      width:100vw;
+      height:1px;
+      background:rgba(255,255,255,.08);
+      pointer-events:none;
     }
+    .bleed-line.subtle{ background:rgba(255,255,255,.06); }
+
+    .footer-bottom{margin-top:.75rem;padding-top:.6rem;font-size:.85rem;text-align:center;position:relative}
 
     @media (max-width:1024px){.hero{grid-template-columns:1fr}.cta{justify-content:center}}
     @media (max-width:560px){.btn{width:100%;justify-content:center}}
@@ -157,7 +159,7 @@
           <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
           </button>
-        <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
+          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
           </button>
         </div>
@@ -189,6 +191,9 @@
 </main>
 
 <footer class="site-footer">
+  <!-- Vollbreite Linie oben -->
+  <div class="bleed-line"></div>
+
   <div class="footer-top">
     <nav class="footer-links" aria-label="Kanäle">
       <a class="twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener">Twitch</a>
@@ -198,6 +203,10 @@
       <a href="mailto:winzibusiness@gmail.com">winzibusiness@gmail.com</a>
     </nav>
   </div>
+
+  <!-- Vollbreite Linie zwischen Blöcken -->
+  <div class="bleed-line subtle"></div>
+
   <div class="footer-bottom">© <span id="year"></span> Winzi. Alle Rechte vorbehalten.</div>
 </footer>
 
@@ -238,10 +247,9 @@
 
     let twitchPlayer = null;
     let twitchRO = null;
-    let es = null; // EventSource Handle
+    let es = null;
     let pollingTimer = null;
 
-    // --- Kick helpers
     const getKickEl = () => document.getElementById('kick-player');
     const buildKickEl = () => {
       const el = document.createElement('iframe');
@@ -255,7 +263,6 @@
       return el;
     };
 
-    // --- Twitch helpers
     function canEmbedTwitch(){
       const proto = location.protocol, host = location.hostname;
       if (proto === 'https:') return true;
@@ -307,9 +314,7 @@
       } catch(e){}
     }
     function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
-    function destroyTwitch(){ try{ twitchPlayer && twitchPlayer.pause(); }catch(e){} /* kein destroy in API */ }
 
-    // --- Kick URL
     function kickURL(muted){
       const u = new URL('https://player.kick.com/winzi');
       u.searchParams.set('autoplay','true');
@@ -335,14 +340,12 @@
       },0);
     }
 
-    // --- Render (debounced via rAF)
     let rafId=null;
     function scheduleRender(){ if (rafId) return; rafId = requestAnimationFrame(()=>{ rafId=null; render(); }); }
 
     function render(){
       const tOff = !state.twitchLive, kOff = !state.kickLive;
 
-      // Tabs: nur Previews (nicht Follow-Buttons) ausgrauen
       twitchBtn.classList.toggle('online', !tOff);
       kickBtn.classList.toggle('online', !kOff);
       twitchBtn.classList.toggle('offline', tOff);
@@ -350,7 +353,6 @@
       twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
       kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
 
-      // Follow-Buttons: Live-Badge
       btnTwitch.classList.toggle('live', state.twitchLive);
       btnKick.classList.toggle('live', state.kickLive);
 
@@ -377,12 +379,10 @@
       if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
       const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
 
-      // Watchdog: wenn Twitch aktiv ist, darf kein Kick-iframe mit echter src im DOM bleiben
       if (state.current === 'twitch'){
         const el = getKickEl();
         if (el && el.src && !el.src.startsWith('about:')) pauseKick();
       }
-      // Twitch-RO sparen, wenn Twitch nicht sichtbar
       if (twitchRO && !showT){ try{ twitchRO.disconnect(); twitchRO=null; }catch(e){} }
     }
 
@@ -392,7 +392,6 @@
       state.current = which; scheduleRender();
     }
 
-    // Events
     twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); }, {passive:true});
     kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  }, {passive:true});
     heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; }, {passive:true});
@@ -412,11 +411,9 @@
     }, { threshold:[0,0.5,1], rootMargin:"0px" });
     io.observe(heroCard);
 
-    // Initial
     document.getElementById('year').textContent = new Date().getFullYear();
     render();
 
-    // ---- Live-Status: SSE on-demand, sonst Backoff-Polling
     const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
     const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
@@ -447,7 +444,7 @@
         try{
           const h = etag ? {'If-None-Match': etag} : {};
           const res = await fetch(STATUS_ENDPOINT, {headers:h, cache:'no-store'});
-          if (res.status === 304) return last;
+        if (res.status === 304) return last;
           if (!res.ok) return null;
           etag = res.headers.get('ETag') || '';
           const j = await res.json();
@@ -469,7 +466,6 @@
     function stopPolling(){ clearTimeout(pollingTimer); pollingTimer=null; }
 
     function maybeStartLive(){
-      // Dev override ?live=...
       const liveParam = new URLSearchParams(location.search).get('live');
       if (liveParam) {
         const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
@@ -487,7 +483,6 @@
       }
     }
 
-    // Start Live-Status erst idle/bei Sichtbarkeit
     (window.requestIdleCallback || setTimeout)(()=> maybeStartLive(), 500);
   })();
 </script>
