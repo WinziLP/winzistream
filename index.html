@@ -9,37 +9,36 @@
   <meta name="theme-color" content="#160b22" />
   <meta name="color-scheme" content="dark light">
 
-  <!-- Live-Status Endpoints (JSON + SSE) -->
+  <!-- Live-Status Endpoints -->
   <meta name="status-endpoint" content="https://status.winzi.stream/winzi.json">
   <meta name="status-sse" content="https://status.winzi.stream/winzi.sse">
 
-  <!-- Twitch parents (für Embed Domain-Whitelist) -->
+  <!-- Twitch parents -->
   <meta name="twitch-parents" content="winzi.stream,www.winzi.stream,localhost,127.0.0.1">
 
-  <!-- Twitch Embed JS-API -->
   <script src="https://player.twitch.tv/js/embed/v1.js" defer></script>
 
   <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500,1,600&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 
   <style>
-    :root {
-      --bg:#120a1b; --bg-2:#1d1230; --text:#f2f3f5; --muted:#9aa0ab;
-      --kick:#00E701; --twitch:#9147ff; --card:#0f1322; --ring:rgba(255,75,209,.55);
-      --shadow:0 10px 25px rgba(0,0,0,.35); --radius:1.25rem; --radius-lg:1.5rem;
-      --maxw:1280px; --header-h:64px;
+    :root{
+      --bg:#120a1b;--bg-2:#1d1230;--text:#f2f3f5;--muted:#9aa0ab;
+      --kick:#00E701;--twitch:#9147ff;--card:#0f1322;--ring:rgba(255,75,209,.55);
+      --shadow:0 10px 25px rgba(0,0,0,.35);--radius:1.25rem;--radius-lg:1.5rem;
+      --maxw:1280px;--header-h:64px;
       --font-display:"Roboto Condensed",system-ui,-apple-system,Segoe UI,Roboto,Inter,Helvetica,Arial,sans-serif;
       --font-body:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,"Apple Color Emoji","Segoe UI Emoji";
       scroll-behavior:smooth;
     }
-    *{box-sizing:border-box} html{height:100%}
+    *{box-sizing:border-box}html{height:100%}
     body{
-      margin:0; font-family:var(--font-body); color:var(--text);
+      margin:0;font-family:var(--font-body);color:var(--text);
       background:
         radial-gradient(1200px 600px at 10% -10%, rgba(255,75,209,.28), transparent 60%),
         radial-gradient(900px 500px at 90% 10%, rgba(165,107,255,.20), transparent 60%),
-        linear-gradient(180deg, var(--bg), var(--bg-2));
-      background-attachment:fixed; line-height:1.6;
-      display:grid; grid-template-rows:auto 1fr auto; min-height:100svh;
+        linear-gradient(180deg,var(--bg),var(--bg-2));
+      background-attachment:fixed;line-height:1.6;
+      display:grid;grid-template-rows:auto 1fr auto;min-height:100svh;
     }
     header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(10px);
       background:linear-gradient(180deg,rgba(18,10,27,.82),rgba(18,10,27,.36));
@@ -83,31 +82,13 @@
     #tab-twitch[aria-selected="true"]{background:rgba(145,71,255,.15)}
     #tab-kick[aria-selected="true"]{background:rgba(0,231,1,.12)}
 
-    .player, .player-host{
-      aspect-ratio:16/9;
-      width:100%;
-      border:0;
-      border-radius:calc(var(--radius) - .25rem);
-      background:#0a0f19;
-      opacity:0;
-      transition:opacity .25s ease;
-      position:relative;
-      overflow:hidden;
-      display:block;
+    .player,.player-host{
+      aspect-ratio:16/9;width:100%;border:0;border-radius:calc(var(--radius) - .25rem);
+      background:#0a0f19;opacity:0;transition:opacity .25s ease;position:relative;overflow:hidden;display:block;
     }
-    .player.show, .player-host.show{opacity:1}
-
-    /* Twitch-iframe IMMER vollflächig */
+    .player.show,.player-host.show{opacity:1}
     #twitch-host{position:relative}
-    #twitch-host iframe{
-      position:absolute !important;
-      inset:0 !important;
-      width:100% !important;
-      height:100% !important;
-      border:0 !important;
-      border-radius:inherit;
-      display:block;
-    }
+    #twitch-host iframe{position:absolute !important;inset:0 !important;width:100% !important;height:100% !important;border:0 !important;border-radius:inherit;display:block}
 
     .offline-box{display:flex;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px dashed rgba(255,255,255,.15);color:#cbd5e1;font-weight:800;letter-spacing:.02em;padding:1rem}
     .offline-box.hidden{display:none}
@@ -125,329 +106,339 @@
     @media (max-width:1024px){.hero{grid-template-columns:1fr}.cta{justify-content:center}}
     @media (max-width:560px){.btn{width:100%;justify-content:center}}
   </style>
-
-  <!-- Inline Icons -->
-  <svg width="0" height="0" style="position:absolute; width:0; height:0; overflow:hidden" aria-hidden="true" focusable="false">
-    <defs>
-      <symbol id="ico-twitch" viewBox="0 0 512 512">
-        <path fill="currentColor" d="M80 0L32 96v320h128v96l96-96h128l96-96V0H80zm352 256l-64 64H256l-64 64v-64h-64V64h304v192zM336 112h48v112h-48V112zm-112 0h48v112h-48V112z"/>
-      </symbol>
-      <symbol id="ico-kick" viewBox="0 0 26 26">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M1 0H9.76711V5.79452H12.589V2.82193H15.5616V0H24.1781V8.61645H21.3561V11.589H18.3836V14.411H21.3561V17.3836H24.1781V26H15.5616V23.1781H12.589V20.2055H9.76711V26H1V0Z" fill="currentColor"/>
-      </symbol>
-    </defs>
-  </svg>
 </head>
 <body>
-  <header>
-    <div class="nav"><a class="brand" href="#top"><span>WINZI</span></a></div>
-  </header>
+<header>
+  <div class="nav"><a class="brand" href="#top"><span>WINZI</span></a></div>
+</header>
 
-  <main id="top">
-    <section class="hero" aria-labelledby="hero-title">
-      <div>
-        <p class="eyebrow">Streamer & Community</p>
-        <h1 id="hero-title">WINZI</h1>
-        <p class="sub">Komm vorbei, häng mit der Community ab und verpass keine Streams mehr – live auf <strong>Twitch</strong> &amp; <strong>Kick</strong>.</p>
-        <div class="cta">
-          <a id="btn-twitch" class="btn twitch" target="_blank" rel="noopener" href="https://twitch.tv/winzilp"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch folgen <span class="live-pill">LIVE</span></a>
-          <a id="btn-kick" class="btn kick" target="_blank" rel="noopener" href="https://kick.com/winzi"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick folgen <span class="live-pill">LIVE</span></a>
-        </div>
+<main id="top">
+  <section class="hero" aria-labelledby="hero-title">
+    <div>
+      <p class="eyebrow">Streamer & Community</p>
+      <h1 id="hero-title">WINZI</h1>
+      <p class="sub">Komm vorbei, häng mit der Community ab und verpass keine Streams mehr – live auf <strong>Twitch</strong> &amp; <strong>Kick</strong>.</p>
+      <div class="cta">
+        <a id="btn-twitch" class="btn twitch" target="_blank" rel="noopener" href="https://twitch.tv/winzilp">
+          <svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch folgen <span class="live-pill">LIVE</span>
+        </a>
+        <a id="btn-kick" class="btn kick" target="_blank" rel="noopener" href="https://kick.com/winzi">
+          <svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick folgen <span class="live-pill">LIVE</span>
+        </a>
       </div>
-
-      <div class="hero-card" id="hero-card">
-        <div class="embed-wrap">
-          <div class="tabs" role="tablist">
-            <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
-              <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
-            </button>
-            <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
-              <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
-            </button>
-          </div>
-
-          <!-- Twitch Host (JS-API rendert den Player hier hinein) -->
-          <div id="panel-twitch" role="tabpanel" aria-labelledby="tab-twitch" hidden>
-            <div id="twitch-host" class="player-host"></div>
-          </div>
-
-          <!-- Kick als iframe -->
-          <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
-            <iframe id="kick-player" class="player"
-              allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
-              allowfullscreen
-              referrerpolicy="strict-origin-when-cross-origin"
-              loading="lazy" fetchpriority="high"></iframe>
-          </div>
-
-          <div id="offline-box" class="offline-box">Currently Offline :c</div>
-          <div id="embed-error" class="error-box">
-            <div>Der Twitch-Player kann in einer lokalen Datei (file://) nicht eingebettet werden.</div>
-            <div style="font-weight:600">Öffne den Stream extern oder starte die Seite über http://localhost:</div>
-            <div class="cta" style="margin-top:.5rem">
-              <a class="btn twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch ansehen</a>
-              <a class="btn kick" href="https://kick.com/winzi" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick ansehen</a>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="footer-top">
-      <nav class="footer-links" aria-label="Kanäle">
-        <a class="twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener">Twitch</a>
-        <a class="kick" href="https://kick.com/winzi" target="_blank" rel="noopener">Kick</a>
-      </nav>
-      <nav class="footer-links" aria-label="Kontakt">
-        <a href="mailto:winzibusiness@gmail.com">winzibusiness@gmail.com</a>
-      </nav>
     </div>
-    <div class="footer-bottom">© <span id="year"></span> Winzi. Alle Rechte vorbehalten.</div>
-  </footer>
 
-  <script>
-    document.getElementById('year').textContent = new Date().getFullYear();
+    <div class="hero-card" id="hero-card">
+      <div class="embed-wrap">
+        <div class="tabs" role="tablist">
+          <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
+            <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
+          </button>
+          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
+            <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
+          </button>
+        </div>
 
-    (function setupEmbeds(){
-      const twitchBtn = document.getElementById('tab-twitch');
-      const kickBtn   = document.getElementById('tab-kick');
-      const twitchPanel = document.getElementById('panel-twitch');
-      const kickPanel   = document.getElementById('panel-kick');
-      const offlineBox  = document.getElementById('offline-box');
-      const embedErrorBox = document.getElementById('embed-error');
-      const btnTwitch = document.getElementById('btn-twitch');
-      const btnKick   = document.getElementById('btn-kick');
-      const heroCard  = document.getElementById('hero-card');
-      const twitchHost = document.getElementById('twitch-host');
+        <div id="panel-twitch" role="tabpanel" aria-labelledby="tab-twitch" hidden>
+          <div id="twitch-host" class="player-host"></div>
+        </div>
 
-      let state = {
-        twitchLive:false, kickLive:false,
-        current:'twitch',
-        userInteracted:false,
-        heroInView:true,
-        kickSavedSrc:""
+        <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
+          <iframe id="kick-player" class="player"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowfullscreen
+            referrerpolicy="strict-origin-when-cross-origin"
+            loading="lazy" fetchpriority="high"></iframe>
+        </div>
+
+        <div id="offline-box" class="offline-box">Currently Offline :c</div>
+        <div id="embed-error" class="error-box">
+          <div>Der Twitch-Player kann in einer lokalen Datei (file://) nicht eingebettet werden.</div>
+          <div style="font-weight:600">Öffne den Stream extern oder starte die Seite über http://localhost:</div>
+          <div class="cta" style="margin-top:.5rem">
+            <a class="btn twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Auf Twitch ansehen</a>
+            <a class="btn kick" href="https://kick.com/winzi" target="_blank" rel="noopener"><svg class="ico" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Auf Kick ansehen</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-top">
+    <nav class="footer-links" aria-label="Kanäle">
+      <a class="twitch" href="https://twitch.tv/winzilp" target="_blank" rel="noopener">Twitch</a>
+      <a class="kick" href="https://kick.com/winzi" target="_blank" rel="noopener">Kick</a>
+    </nav>
+    <nav class="footer-links" aria-label="Kontakt">
+      <a href="mailto:winzibusiness@gmail.com">winzibusiness@gmail.com</a>
+    </nav>
+  </div>
+  <div class="footer-bottom">© <span id="year"></span> Winzi. Alle Rechte vorbehalten.</div>
+</footer>
+
+<!-- Icons -->
+<svg width="0" height="0" style="position:absolute;width:0;height:0;overflow:hidden" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ico-twitch" viewBox="0 0 512 512">
+      <path fill="currentColor" d="M80 0L32 96v320h128v96l96-96h128l96-96V0H80zm352 256l-64 64H256l-64 64v-64h-64V64h304v192zM336 112h48v112h-48V112zm-112 0h48v112h-48V112z"/>
+    </symbol>
+    <symbol id="ico-kick" viewBox="0 0 26 26">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M1 0H9.76711V5.79452H12.589V2.82193H15.5616V0H24.1781V8.61645H21.3561V11.589H18.3836V14.411H21.3561V17.3836H24.1781V26H15.5616V23.1781H12.589V20.2055H9.76711V26H1V0Z" fill="currentColor"/>
+    </symbol>
+  </defs>
+</svg>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  (function setupEmbeds(){
+    const twitchBtn = document.getElementById('tab-twitch');
+    const kickBtn   = document.getElementById('tab-kick');
+    const twitchPanel = document.getElementById('panel-twitch');
+    const kickPanel   = document.getElementById('panel-kick');
+    const offlineBox  = document.getElementById('offline-box');
+    const embedErrorBox = document.getElementById('embed-error');
+    const btnTwitch = document.getElementById('btn-twitch');
+    const btnKick   = document.getElementById('btn-kick');
+    const heroCard  = document.getElementById('hero-card');
+    const twitchHost = document.getElementById('twitch-host');
+
+    let state = {
+      twitchLive:false, kickLive:false,
+      current:'twitch',
+      userInteracted:false,
+      heroInView:true,
+      kickSavedSrc:""
+    };
+
+    let twitchPlayer = null;
+    let twitchRO = null;
+
+    // --- Kick helpers
+    const getKickEl = () => document.getElementById('kick-player');
+    const buildKickEl = () => {
+      const el = document.createElement('iframe');
+      el.id = 'kick-player';
+      el.className = 'player';
+      el.allowFullscreen = true;
+      el.setAttribute('allow','autoplay; fullscreen; picture-in-picture');
+      el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+      el.setAttribute('loading','lazy');
+      el.setAttribute('fetchpriority','high');
+      return el;
+    };
+
+    // --- Twitch helpers
+    function canEmbedTwitch(){
+      const proto = location.protocol, host = location.hostname;
+      if (proto === 'https:') return true;
+      if (proto === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
+      return false;
+    }
+    function twitchParents(){
+      const meta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
+      const p = meta.split(',').map(s=>s.trim()).filter(Boolean);
+      const h = location.hostname; if (h && !p.includes(h)) p.push(h);
+      ['localhost','127.0.0.1'].forEach(d=>{ if(!p.includes(d)) p.push(d); });
+      return p;
+    }
+    function initTwitch(muted){
+      if (!canEmbedTwitch()) return;
+      if (!window.Twitch || !window.Twitch.Player) return;
+      if (twitchPlayer) { try { twitchPlayer.setMuted(!!muted); } catch(e){} return; }
+
+      const make = () => {
+        const w = twitchHost.clientWidth || 1280;
+        const h = Math.round(w * 9/16);
+        twitchPlayer = new Twitch.Player('twitch-host', {
+          channel: 'winzilp',
+          parent: twitchParents(),
+          autoplay: true,
+          muted: !!muted,
+          width: w,
+          height: h
+        });
+        twitchPlayer.addEventListener(Twitch.Player.READY, ()=>{
+          twitchHost.classList.add('show');
+          setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
+        });
+        if ('ResizeObserver' in window && !twitchRO){
+          twitchRO = new ResizeObserver(()=> window.dispatchEvent(new Event('resize')));
+          twitchRO.observe(twitchHost);
+        }
       };
+      requestAnimationFrame(()=> requestAnimationFrame(make));
+    }
+    function playTwitch(withAudio){
+      if (!twitchPlayer) { initTwitch(!withAudio); }
+      try {
+        if (twitchPlayer){
+          twitchPlayer.setMuted(!withAudio);
+          twitchPlayer.play();
+          setTimeout(()=> window.dispatchEvent(new Event('resize')), 0);
+        }
+      } catch(e){}
+    }
+    function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
 
-      let twitchPlayer = null;
-      let twitchRO = null;
+    // --- Kick URL
+    function kickURL(muted){
+      const u = new URL('https://player.kick.com/winzi');
+      u.searchParams.set('autoplay','true');
+      u.searchParams.set('muted', String(!!muted));
+      u.searchParams.set('playsinline','1');
+      return u.toString();
+    }
 
-      // ----- utils
-      const getKickEl = () => document.getElementById('kick-player');
-      const buildKickEl = () => {
-        const el = document.createElement('iframe');
-        el.id = 'kick-player';
-        el.className = 'player';
-        el.allowFullscreen = true;
-        el.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write');
-        el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-        el.setAttribute('loading','lazy');
-        el.setAttribute('fetchpriority','high');
-        return el;
-      };
+    // --- Kick Resume/Stop (robust)
+    function resumeKick(withAudio){
+      let el = getKickEl();
+      if (!el){ el = buildKickEl(); kickPanel.appendChild(el); }
+      const want = state.kickSavedSrc || kickURL(!withAudio ? true : false);
+      if (el.src !== want) el.src = want;
+      requestAnimationFrame(()=> el.classList.add('show'));
+    }
+    function pauseKick(){
+      const el = getKickEl();
+      if (!el) return;
+      if (el.src && !el.src.startsWith('about:')) state.kickSavedSrc = el.src;
+      try { el.src = 'about:blank'; } catch(e){}
+      // wirklich stoppen: node entfernen + leeres placeholder-iframe
+      setTimeout(()=>{
+        if (el.isConnected) el.remove();
+        if (!getKickEl()) kickPanel.appendChild(buildKickEl()); // placeholder ohne src
+      },0);
+    }
 
-      function canEmbedTwitch(){
-        const proto = location.protocol, host = location.hostname;
-        if (proto === 'https:') return true;
-        if (proto === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
-        return false;
-      }
-      function twitchParents(){
-        const meta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
-        const p = meta.split(',').map(s=>s.trim()).filter(Boolean);
-        const h = location.hostname; if (h && !p.includes(h)) p.push(h);
-        ['localhost','127.0.0.1'].forEach(d=>{ if(!p.includes(d)) p.push(d); });
-        return p;
-      }
+    // --- Render
+    function render(){
+      const tOff = !state.twitchLive, kOff = !state.kickLive;
 
-      // Twitch – init mit doppeltem RAF + ResizeObserver, volle Größe
-      function initTwitch(muted){
-        if (!canEmbedTwitch()) return;
-        if (!window.Twitch || !window.Twitch.Player) return;
-        if (twitchPlayer) { try { twitchPlayer.setMuted(!!muted); } catch(e){} return; }
+      twitchBtn.classList.toggle('online', !tOff);
+      kickBtn.classList.toggle('online', !kOff);
+      twitchBtn.classList.toggle('offline', tOff);
+      kickBtn.classList.toggle('offline', kOff);
+      twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
+      kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
 
-        const make = () => {
-          const w = twitchHost.clientWidth || 1280;
-          const h = Math.round(w * 9/16);
-          twitchPlayer = new Twitch.Player('twitch-host', {
-            channel: 'winzilp',
-            parent: twitchParents(),
-            autoplay: true,
-            muted: !!muted,
-            width: w,
-            height: h
-          });
-          twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
-            twitchHost.classList.add('show');
-            setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
-          });
-          if ('ResizeObserver' in window && !twitchRO){
-            twitchRO = new ResizeObserver(()=> window.dispatchEvent(new Event('resize')));
-            twitchRO.observe(twitchHost);
-          }
-        };
-        requestAnimationFrame(()=> requestAnimationFrame(make));
-      }
-      function playTwitch(withAudio){
-        if (!twitchPlayer) { initTwitch(!withAudio); }
-        try {
-          if (twitchPlayer){
-            twitchPlayer.setMuted(!withAudio);
-            twitchPlayer.play();
-            setTimeout(()=> window.dispatchEvent(new Event('resize')), 0);
-          }
-        } catch(e){}
-      }
-      function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
+      btnTwitch.classList.toggle('live', state.twitchLive);
+      btnKick.classList.toggle('live', state.kickLive);
 
-      // Kick – robuste Hard-Pause durch Node-Replacement
-      function kickURL(muted){
-        const u = new URL('https://player.kick.com/winzi');
-        u.searchParams.set('autoplay','true');
-        u.searchParams.set('muted', String(!!muted));
-        u.searchParams.set('playsinline','1');
-        return u.toString();
-      }
-      function resumeKick(withAudio){
-        let el = getKickEl();
-        if (!el){ el = buildKickEl(); kickPanel.appendChild(el); }
-        const want = state.kickSavedSrc || kickURL(!withAudio ? true : false);
-        if (el.src !== want) el.src = want;
-        requestAnimationFrame(()=> el.classList.add('show'));
-      }
-      function pauseKick(){
+      const showT = (state.current === 'twitch' && state.twitchLive && state.heroInView);
+      const showK = (state.current === 'kick'   && state.kickLive   && state.heroInView);
+
+      twitchPanel.hidden = !showT;
+      kickPanel.hidden   = !showK;
+
+      const allowAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
+
+      if (showT && canEmbedTwitch()) { initTwitch(!allowAudio); playTwitch(allowAudio); } else { pauseTwitch(); }
+      if (showK) { resumeKick(allowAudio); } else { pauseKick(); }
+
+      const noOneLive = !state.twitchLive && !state.kickLive;
+      offlineBox.classList.toggle('hidden', !noOneLive);
+
+      const showEmbedError = showT && !canEmbedTwitch();
+      embedErrorBox.classList.toggle('show', showEmbedError);
+
+      twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
+      kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
+
+      if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
+      const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
+
+      // Watchdog: wenn Twitch aktiv ist, darf kein Kick-iframe mit echter src existieren
+      if (state.current === 'twitch'){
         const el = getKickEl();
-        if (!el) return;
-        if (el.src && el.src !== 'about:blank') state.kickSavedSrc = el.src;
-        const fresh = buildKickEl(); // ohne src => garantiert gestoppt
-        el.replaceWith(fresh);
+        if (el && el.src && !el.src.startsWith('about:') && !el.src.endsWith('/blank')) pauseKick();
       }
+    }
 
-      // ----- render
-      function render(){
-        const tOff = !state.twitchLive, kOff = !state.kickLive;
+    function show(which){
+      if (which === 'twitch' && !state.twitchLive) return;
+      if (which === 'kick'   && !state.kickLive)   return;
+      state.current = which; render();
+    }
 
-        twitchBtn.classList.toggle('online', !tOff);
-        kickBtn.classList.toggle('online', !kOff);
-        twitchBtn.classList.toggle('offline', tOff);
-        kickBtn.classList.toggle('offline', kOff);
-        twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
-        kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
+    // Events
+    twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
+    kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
+    heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
 
-        btnTwitch.classList.toggle('live', state.twitchLive);
-        btnKick.classList.toggle('live', state.kickLive);
-
-        const showT = (state.current === 'twitch' && state.twitchLive && state.heroInView);
-        const showK = (state.current === 'kick'   && state.kickLive   && state.heroInView);
-
-        twitchPanel.hidden = !showT;
-        kickPanel.hidden   = !showK;
-
-        const allowAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
-
-        if (showT && canEmbedTwitch()) { initTwitch(!allowAudio); playTwitch(allowAudio); } else { pauseTwitch(); }
-        if (showK) { resumeKick(allowAudio); } else { pauseKick(); }
-
-        const noOneLive = !state.twitchLive && !state.kickLive;
-        offlineBox.classList.toggle('hidden', !noOneLive);
-
-        const showEmbedError = showT && !canEmbedTwitch();
-        embedErrorBox.classList.toggle('show', showEmbedError);
-
-        twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
-        kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
-
-        if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
-        const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
-      }
-
-      function show(which){
-        if (which === 'twitch' && !state.twitchLive) return;
-        if (which === 'kick'   && !state.kickLive)   return;
-        state.current = which; render();
-      }
-
-      // events
-      twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
-      kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
-      heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
-
-      document.addEventListener('visibilitychange', ()=>{
-        if (document.visibilityState !== 'visible'){ pauseTwitch(); pauseKick(); }
-        render();
-      });
-
-      const io = new IntersectionObserver((entries)=>{
-        const e = entries[0];
-        state.heroInView = e && e.isIntersecting && e.intersectionRatio >= 0.5;
-        if (!state.heroInView){ pauseTwitch(); pauseKick(); }
-        render();
-      }, { threshold:[0,0.5,1], rootMargin:"0px" });
-      io.observe(heroCard);
-
-      // Initial
+    document.addEventListener('visibilitychange', ()=>{
+      if (document.visibilityState !== 'visible'){ pauseTwitch(); pauseKick(); }
       render();
+    });
+    window.addEventListener('blur', ()=>{ pauseTwitch(); pauseKick(); }); // extra safety
 
-      // Live-Status (SSE → Fallback Polling)
-      const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
-      const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
+    const io = new IntersectionObserver((entries)=>{
+      const e = entries[0];
+      state.heroInView = e && e.isIntersecting && e.intersectionRatio >= 0.5;
+      if (!state.heroInView){ pauseTwitch(); pauseKick(); }
+      render();
+    }, { threshold:[0,0.5,1], rootMargin:"0px" });
+    io.observe(heroCard);
 
-      function applyLive(t,k){
-        const prev = {t:state.twitchLive,k:state.kickLive,cur:state.current};
-        state.twitchLive = !!t; state.kickLive = !!k;
-        if (state.twitchLive && canEmbedTwitch()) state.current = 'twitch';
-        else if (state.kickLive) state.current = 'kick';
-        else state.current = 'twitch';
-        if (prev.t!==state.twitchLive || prev.k!==state.kickLive || prev.cur!==state.current) render();
+    // Initial
+    render();
+
+    // Live-Status
+    const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
+    const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
+    function applyLive(t,k){
+      const prev = {t:state.twitchLive,k:state.kickLive,cur:state.current};
+      state.twitchLive = !!t; state.kickLive = !!k;
+      if (state.twitchLive && canEmbedTwitch()) state.current = 'twitch';
+      else if (state.kickLive) state.current = 'kick';
+      else state.current = 'twitch';
+      if (prev.t!==state.twitchLive || prev.k!==state.kickLive || prev.cur!==state.current) render();
+    }
+    function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
+    (function initLive(){
+      const liveParam = new URLSearchParams(location.search).get('live');
+      if (liveParam) {
+        const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
+        if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
       }
-      function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
-
-      (function initLive(){
-        const liveParam = new URLSearchParams(location.search).get('live');
-        if (liveParam) {
-          const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
-          if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
-        }
-        if (!STATUS_ENDPOINT && !STATUS_SSE) return;
-
-        if (STATUS_SSE && supportsSSE()) {
-          try {
-            const es = new EventSource(STATUS_SSE);
-            es.addEventListener('message', ev => {
-              try{ const d = JSON.parse(ev.data); applyLive(!!d.twitch, !!d.kick); }catch{}
-            });
-            es.addEventListener('error', () => {});
-          } catch { startPolling(); }
-        } else { startPolling(); }
-      })();
-
-      function startPolling(){
-        const TTL_VISIBLE = 10000, TTL_HIDDEN = 45000; let etag = '', timer = null, last = {t:false,k:false};
-        async function fetchStatus(){
-          try{
-            const h = etag ? {'If-None-Match': etag} : {};
-            const res = await fetch(STATUS_ENDPOINT, {headers:h, cache:'no-store'});
-            if (res.status === 304) return last;
-            if (!res.ok) return null;
-            etag = res.headers.get('ETag') || '';
-            const j = await res.json();
-            last = {t:!!j.twitch,k:!!j.kick};
-            return last;
-          }catch{return null}
-        }
-        async function tick(){
-          clearTimeout(timer);
-          const r = await fetchStatus();
-          if (r) applyLive(r.t, r.k);
-          const ttl = (document.visibilityState==='visible'?TTL_VISIBLE:TTL_HIDDEN) * ((state.twitchLive||state.kickLive)?0.6:1);
-          timer = setTimeout(tick, Math.max(6000, ttl));
-        }
-        document.addEventListener('visibilitychange', tick);
-        window.addEventListener('focus', tick);
-        tick();
-      }
+      if (!STATUS_ENDPOINT && !STATUS_SSE) return;
+      if (STATUS_SSE && supportsSSE()) {
+        try {
+          const es = new EventSource(STATUS_SSE);
+          es.addEventListener('message', ev => {
+            try{ const d = JSON.parse(ev.data); applyLive(!!d.twitch, !!d.kick); }catch{}
+          });
+          es.addEventListener('error', () => {});
+        } catch { startPolling(); }
+      } else { startPolling(); }
     })();
-  </script>
+    function startPolling(){
+      const TTL_VISIBLE = 10000, TTL_HIDDEN = 45000; let etag = '', timer = null, last = {t:false,k:false};
+      async function fetchStatus(){
+        try{
+          const h = etag ? {'If-None-Match': etag} : {};
+          const res = await fetch(STATUS_ENDPOINT, {headers:h, cache:'no-store'});
+          if (res.status === 304) return last;
+          if (!res.ok) return null;
+          etag = res.headers.get('ETag') || '';
+          const j = await res.json();
+          last = {t:!!j.twitch,k:!!j.kick};
+          return last;
+        }catch{return null}
+      }
+      async function tick(){
+        clearTimeout(timer);
+        const r = await fetchStatus();
+        if (r) applyLive(r.t, r.k);
+        const ttl = (document.visibilityState==='visible'?TTL_VISIBLE:TTL_HIDDEN) * ((state.twitchLive||state.kickLive)?0.6:1);
+        timer = setTimeout(tick, Math.max(6000, ttl));
+      }
+      document.addEventListener('visibilitychange', tick);
+      window.addEventListener('focus', tick);
+      tick();
+    }
+  })();
+</script>
 </body>
 </html>
