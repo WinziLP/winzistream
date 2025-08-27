@@ -83,8 +83,32 @@
     #tab-twitch[aria-selected="true"]{background:rgba(145,71,255,.15)}
     #tab-kick[aria-selected="true"]{background:rgba(0,231,1,.12)}
 
-    .player, .player-host{aspect-ratio:16/9;width:100%;border:0;border-radius:calc(var(--radius) - .25rem);background:#0a0f19;opacity:0;transition:opacity .25s ease}
+    .player, .player-host{
+      aspect-ratio:16/9;
+      width:100%;
+      border:0;
+      border-radius:calc(var(--radius) - .25rem);
+      background:#0a0f19;
+      opacity:0;
+      transition:opacity .25s ease;
+      position:relative;
+      overflow:hidden; /* wichtig für Twitch-iframe */
+      display:block;
+    }
     .player.show, .player-host.show{opacity:1}
+
+    /* Twitch-iframe IMMER vollflächig */
+    #twitch-host{position:relative}
+    #twitch-host iframe{
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      border:0 !important;
+      border-radius:inherit;
+      display:block;
+    }
+
     .offline-box{display:flex;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px dashed rgba(255,255,255,.15);color:#cbd5e1;font-weight:800;letter-spacing:.02em;padding:1rem}
     .offline-box.hidden{display:none}
     .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
@@ -197,6 +221,7 @@
       const btnKick   = document.getElementById('btn-kick');
       const heroCard  = document.getElementById('hero-card');
       const twitchHost = document.getElementById('twitch-host');
+      const kickIframe = document.getElementById('kick-player');
 
       let state = {
         twitchLive:false, kickLive:false,
@@ -230,7 +255,9 @@
             channel: 'winzilp',
             parent: twitchParents(),
             autoplay: true,
-            muted: !!muted
+            muted: !!muted,
+            width: '100%',          // <— volle Breite
+            height: '100%'          // <— volle Höhe
           });
           twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
             twitchHost.classList.add('show');
@@ -252,18 +279,6 @@
         try { twitchPlayer && twitchPlayer.pause(); } catch(e){}
       }
 
-      function getKickIframe(){ return document.getElementById('kick-player'); }
-      function buildKickIframe(){
-        const el = document.createElement('iframe');
-        el.id = 'kick-player';
-        el.className = 'player';
-        el.allowFullscreen = true;
-        el.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write');
-        el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
-        el.setAttribute('loading','lazy');
-        el.setAttribute('fetchpriority','high');
-        return el;
-      }
       function kickURL(muted){
         const u = new URL('https://player.kick.com/winzi');
         u.searchParams.set('autoplay','true');
@@ -272,22 +287,13 @@
         return u.toString();
       }
       function resumeKick(withAudio){
-        let el = getKickIframe();
-        if (!el){
-          el = buildKickIframe();
-          kickPanel.appendChild(el);
-        }
         const want = state.kickSavedSrc || kickURL(!withAudio ? true : false);
-        if (el.src !== want) el.src = want;
-        requestAnimationFrame(()=> el.classList.add('show'));
+        if (kickIframe.src !== want) kickIframe.src = want;
+        requestAnimationFrame(()=> kickIframe.classList.add('show'));
       }
       function pauseKick(){
-        const el = getKickIframe();
-        if (!el) return;
-        if (el.src && el.src !== 'about:blank') state.kickSavedSrc = el.src;
-        // HARTE, aber sehr schnelle & saubere Pause: Node-Replacement (kein Layout-Shift)
-        const fresh = buildKickIframe(); // ohne src
-        el.replaceWith(fresh);
+        if (kickIframe.src && kickIframe.src !== 'about:blank') state.kickSavedSrc = kickIframe.src;
+        try { kickIframe.src = 'about:blank'; } catch(e){}
       }
 
       // ---------- render
@@ -325,7 +331,7 @@
         if (showK) {
           resumeKick(allowAudio);
         } else {
-          pauseKick(); // <— WICHTIG: wirklich stoppen beim Wechsel weg von Kick
+          pauseKick();
         }
 
         // Offline-Anzeige
@@ -342,8 +348,7 @@
 
         // Optik
         if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
-        const kickEl = getKickIframe();
-        if (kickEl) { if (showK) kickEl.classList.add('show'); else kickEl.classList.remove('show'); }
+        if (showK) kickIframe.classList.add('show'); else kickIframe.classList.remove('show');
       }
 
       function show(which){
