@@ -147,7 +147,7 @@
             <div id="twitch-host" class="player-host"></div>
           </div>
 
-          <!-- Kick bleibt iframe (Soft-Pause via about:blank) -->
+          <!-- Kick als iframe -->
           <div id="panel-kick" role="tabpanel" aria-labelledby="tab-kick" hidden>
             <iframe id="kick-player" class="player"
               allow="autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write"
@@ -196,7 +196,6 @@
       const btnTwitch = document.getElementById('btn-twitch');
       const btnKick   = document.getElementById('btn-kick');
       const heroCard  = document.getElementById('hero-card');
-      const kickIframe = document.getElementById('kick-player');
       const twitchHost = document.getElementById('twitch-host');
 
       let state = {
@@ -204,16 +203,17 @@
         current:'twitch',
         userInteracted:false,
         heroInView:true,
-        kickSavedSrc:"",   // für Soft-Pause
+        kickSavedSrc:""
       };
 
       let twitchPlayer = null;
 
+      // ---------- helpers
       function canEmbedTwitch(){
         const proto = location.protocol, host = location.hostname;
         if (proto === 'https:') return true;
         if (proto === 'http:' && (host === 'localhost' || host === '127.0.0.1')) return true;
-        return false; // file:// blockiert
+        return false;
       }
       function twitchParents(){
         const meta = document.querySelector('meta[name="twitch-parents"]')?.content || '';
@@ -224,16 +224,14 @@
       }
       function initTwitch(muted){
         if (!canEmbedTwitch()) return;
-        if (!window.Twitch || !window.Twitch.Player) return; // Script noch nicht geladen
+        if (!window.Twitch || !window.Twitch.Player) return;
         if (!twitchPlayer){
           twitchPlayer = new Twitch.Player('twitch-host', {
             channel: 'winzilp',
             parent: twitchParents(),
             autoplay: true,
-            muted: !!muted,
-            // height/width via CSS (host div hat aspect-ratio)
+            muted: !!muted
           });
-          // optisches Fade-in wenn bereit
           twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
             twitchHost.classList.add('show');
           });
@@ -254,6 +252,18 @@
         try { twitchPlayer && twitchPlayer.pause(); } catch(e){}
       }
 
+      function getKickIframe(){ return document.getElementById('kick-player'); }
+      function buildKickIframe(){
+        const el = document.createElement('iframe');
+        el.id = 'kick-player';
+        el.className = 'player';
+        el.allowFullscreen = true;
+        el.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write');
+        el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+        el.setAttribute('loading','lazy');
+        el.setAttribute('fetchpriority','high');
+        return el;
+      }
       function kickURL(muted){
         const u = new URL('https://player.kick.com/winzi');
         u.searchParams.set('autoplay','true');
@@ -261,26 +271,26 @@
         u.searchParams.set('playsinline','1');
         return u.toString();
       }
-      function ensureKick(withAudio){
-        const want = kickURL(!withAudio ? true : false); // Audio nur wenn erlaubt
-        if (!state.kickSavedSrc) state.kickSavedSrc = want;
-        if (kickIframe.src !== want && kickIframe.src !== 'about:blank') {
-          // falls schon läuft, aber falsche Mute-Einstellung → umschalten
-          kickIframe.src = want;
+      function resumeKick(withAudio){
+        let el = getKickIframe();
+        if (!el){
+          el = buildKickIframe();
+          kickPanel.appendChild(el);
         }
-        if (kickIframe.src === '' || kickIframe.src === 'about:blank') {
-          kickIframe.src = state.kickSavedSrc || want;
-        }
-        requestAnimationFrame(()=> kickIframe.classList.add('show'));
+        const want = state.kickSavedSrc || kickURL(!withAudio ? true : false);
+        if (el.src !== want) el.src = want;
+        requestAnimationFrame(()=> el.classList.add('show'));
       }
       function pauseKick(){
-        // Soft-Pause: aktuelle URL merken, dann about:blank setzen
-        if (kickIframe.src && kickIframe.src !== 'about:blank') {
-          state.kickSavedSrc = kickIframe.src;
-        }
-        try { kickIframe.src = 'about:blank'; } catch(e){}
+        const el = getKickIframe();
+        if (!el) return;
+        if (el.src && el.src !== 'about:blank') state.kickSavedSrc = el.src;
+        // HARTE, aber sehr schnelle & saubere Pause: Node-Replacement (kein Layout-Shift)
+        const fresh = buildKickIframe(); // ohne src
+        el.replaceWith(fresh);
       }
 
+      // ---------- render
       function render(){
         const tOff = !state.twitchLive, kOff = !state.kickLive;
 
@@ -313,9 +323,9 @@
         }
 
         if (showK) {
-          ensureKick(allowAudio);
+          resumeKick(allowAudio);
         } else {
-          pauseKick();
+          pauseKick(); // <— WICHTIG: wirklich stoppen beim Wechsel weg von Kick
         }
 
         // Offline-Anzeige
@@ -332,7 +342,8 @@
 
         // Optik
         if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
-        if (showK) kickIframe.classList.add('show'); else kickIframe.classList.remove('show');
+        const kickEl = getKickIframe();
+        if (kickEl) { if (showK) kickEl.classList.add('show'); else kickEl.classList.remove('show'); }
       }
 
       function show(which){
@@ -341,18 +352,16 @@
         state.current = which; render();
       }
 
-      // User-Interaktion → Audio darf
+      // ---------- events
       twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
       kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
       heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
 
-      // Tab/Seite nicht sichtbar → pausieren
       document.addEventListener('visibilitychange', ()=>{
         if (document.visibilityState !== 'visible'){ pauseTwitch(); pauseKick(); }
         render();
       });
 
-      // Hero im Viewport?
       const io = new IntersectionObserver((entries)=>{
         const e = entries[0];
         state.heroInView = e && e.isIntersecting && e.intersectionRatio >= 0.5;
@@ -364,7 +373,7 @@
       // Initial
       render();
 
-      // Live-Status (SSE → Fallback Polling)
+      // ---------- Live-Status (SSE → Fallback Polling)
       const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
       const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
