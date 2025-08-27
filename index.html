@@ -221,7 +221,6 @@
       const btnKick   = document.getElementById('btn-kick');
       const heroCard  = document.getElementById('hero-card');
       const twitchHost = document.getElementById('twitch-host');
-      const kickIframe = document.getElementById('kick-player');
 
       let state = {
         twitchLive:false, kickLive:false,
@@ -233,6 +232,20 @@
 
       let twitchPlayer = null;
       let twitchRO = null;
+
+      // ----- utils
+      const getKickEl = () => document.getElementById('kick-player');
+      const buildKickEl = () => {
+        const el = document.createElement('iframe');
+        el.id = 'kick-player';
+        el.className = 'player';
+        el.allowFullscreen = true;
+        el.setAttribute('allow','autoplay; fullscreen; picture-in-picture; encrypted-media; clipboard-write');
+        el.setAttribute('referrerpolicy','strict-origin-when-cross-origin');
+        el.setAttribute('loading','lazy');
+        el.setAttribute('fetchpriority','high');
+        return el;
+      };
 
       function canEmbedTwitch(){
         const proto = location.protocol, host = location.hostname;
@@ -248,14 +261,13 @@
         return p;
       }
 
-      // ---- FIX: Player erst nach 2x RAF erstellen + Resize feuern
+      // Twitch – init mit doppeltem RAF + ResizeObserver, volle Größe
       function initTwitch(muted){
         if (!canEmbedTwitch()) return;
         if (!window.Twitch || !window.Twitch.Player) return;
         if (twitchPlayer) { try { twitchPlayer.setMuted(!!muted); } catch(e){} return; }
 
         const make = () => {
-          // numerische Größe für initialen Render
           const w = twitchHost.clientWidth || 1280;
           const h = Math.round(w * 9/16);
           twitchPlayer = new Twitch.Player('twitch-host', {
@@ -268,36 +280,28 @@
           });
           twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
             twitchHost.classList.add('show');
-            // Twitch zum Reflow zwingen
             setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
           });
-          // Beobachte Größenänderungen des Hosts und triggere resize
           if ('ResizeObserver' in window && !twitchRO){
-            twitchRO = new ResizeObserver(()=> {
-              window.dispatchEvent(new Event('resize'));
-            });
+            twitchRO = new ResizeObserver(()=> window.dispatchEvent(new Event('resize')));
             twitchRO.observe(twitchHost);
           }
         };
-        // Warten bis Panel sichtbar & Layout fertig
         requestAnimationFrame(()=> requestAnimationFrame(make));
       }
-
       function playTwitch(withAudio){
         if (!twitchPlayer) { initTwitch(!withAudio); }
         try {
           if (twitchPlayer){
             twitchPlayer.setMuted(!withAudio);
             twitchPlayer.play();
-            // Sicherheit: nach Umschalten nochmal resize
             setTimeout(()=> window.dispatchEvent(new Event('resize')), 0);
           }
         } catch(e){}
       }
-      function pauseTwitch(){
-        try { twitchPlayer && twitchPlayer.pause(); } catch(e){}
-      }
+      function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
 
+      // Kick – robuste Hard-Pause durch Node-Replacement
       function kickURL(muted){
         const u = new URL('https://player.kick.com/winzi');
         u.searchParams.set('autoplay','true');
@@ -306,15 +310,21 @@
         return u.toString();
       }
       function resumeKick(withAudio){
+        let el = getKickEl();
+        if (!el){ el = buildKickEl(); kickPanel.appendChild(el); }
         const want = state.kickSavedSrc || kickURL(!withAudio ? true : false);
-        if (kickIframe.src !== want) kickIframe.src = want;
-        requestAnimationFrame(()=> kickIframe.classList.add('show'));
+        if (el.src !== want) el.src = want;
+        requestAnimationFrame(()=> el.classList.add('show'));
       }
       function pauseKick(){
-        if (kickIframe.src && kickIframe.src !== 'about:blank') state.kickSavedSrc = kickIframe.src;
-        try { kickIframe.src = 'about:blank'; } catch(e){}
+        const el = getKickEl();
+        if (!el) return;
+        if (el.src && el.src !== 'about:blank') state.kickSavedSrc = el.src;
+        const fresh = buildKickEl(); // ohne src => garantiert gestoppt
+        el.replaceWith(fresh);
       }
 
+      // ----- render
       function render(){
         const tOff = !state.twitchLive, kOff = !state.kickLive;
 
@@ -336,18 +346,8 @@
 
         const allowAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
 
-        if (showT && canEmbedTwitch()) {
-          initTwitch(!allowAudio);
-          playTwitch(allowAudio);
-        } else {
-          pauseTwitch();
-        }
-
-        if (showK) {
-          resumeKick(allowAudio);
-        } else {
-          pauseKick();
-        }
+        if (showT && canEmbedTwitch()) { initTwitch(!allowAudio); playTwitch(allowAudio); } else { pauseTwitch(); }
+        if (showK) { resumeKick(allowAudio); } else { pauseKick(); }
 
         const noOneLive = !state.twitchLive && !state.kickLive;
         offlineBox.classList.toggle('hidden', !noOneLive);
@@ -359,7 +359,7 @@
         kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
 
         if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
-        if (showK) kickIframe.classList.add('show'); else kickIframe.classList.remove('show');
+        const kEl = getKickEl(); if (kEl) { if (showK) kEl.classList.add('show'); else kEl.classList.remove('show'); }
       }
 
       function show(which){
@@ -368,6 +368,7 @@
         state.current = which; render();
       }
 
+      // events
       twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
       kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
       heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
@@ -385,8 +386,10 @@
       }, { threshold:[0,0.5,1], rootMargin:"0px" });
       io.observe(heroCard);
 
+      // Initial
       render();
 
+      // Live-Status (SSE → Fallback Polling)
       const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
       const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
@@ -407,6 +410,7 @@
           if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
         }
         if (!STATUS_ENDPOINT && !STATUS_SSE) return;
+
         if (STATUS_SSE && supportsSSE()) {
           try {
             const es = new EventSource(STATUS_SSE);
