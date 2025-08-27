@@ -106,13 +106,22 @@
     .error-box{display:none;align-items:center;justify-content:center;gap:.75rem;text-align:center;flex-direction:column;aspect-ratio:16/9;background:#0a0f19;border-radius:calc(var(--radius) - .25rem);border:1px solid rgba(239,68,68,.35);color:#fecaca;font-weight:800;letter-spacing:.02em;padding:1rem}
     .error-box.show{display:flex}
 
-    .site-footer{max-width:var(--maxw);margin:2rem auto 1rem;padding:1.25rem 1rem 2rem;color:var(--muted);position:relative;font-size:.95rem;content-visibility:auto;contain-intrinsic-size: 800px}
-    .site-footer::before{content:"";position:absolute;left:50%;transform:translateX(-50%);top:0;width:100vw;height:1px;background:rgba(255,255,255,.08)}
+    .site-footer{max-width:var(--maxw);margin:2rem auto 1rem;padding:1.25rem 1rem 2rem;color:var(--muted);position:relative;font-size:.95rem;content-visibility:auto;contain-intrinsic-size: 800px; overflow:visible}
+    /* FULL-BLEED Linien über gesamte Bildschirmbreite */
+    .site-footer::before{
+      content:""; position:absolute; top:0;
+      left:calc(50% - 50vw); width:100vw; height:1px;
+      background:rgba(255,255,255,.08); pointer-events:none;
+    }
     .footer-top{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
     .footer-links{display:flex;flex-direction:column;gap:.25rem}
     .footer-links a{color:var(--muted);text-decoration:none;font-weight:500;opacity:.9}
     .footer-bottom{margin-top:.75rem;padding-top:.6rem;font-size:.85rem;text-align:center;position:relative}
-    .footer-bottom::before{content:"";position:absolute;left:50%;transform:translateX(-50%);top:0;width:100vw;height:1px;background:rgba(255,255,255,.06)}
+    .footer-bottom::before{
+      content:""; position:absolute; top:0;
+      left:calc(50% - 50vw); width:100vw; height:1px;
+      background:rgba(255,255,255,.06); pointer-events:none;
+    }
 
     @media (max-width:1024px){.hero{grid-template-columns:1fr}.cta{justify-content:center}}
     @media (max-width:560px){.btn{width:100%;justify-content:center}}
@@ -148,7 +157,7 @@
           <button type="button" id="tab-twitch" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-twitch" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-twitch"/></svg> Twitch <span class="live-dot"></span>
           </button>
-          <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
+        <button type="button" id="tab-kick" class="tab-btn offline" role="tab" aria-selected="false" aria-controls="panel-kick" aria-disabled="true" disabled>
             <svg class="mini" viewBox="0 0 24 24"><use href="#ico-kick"/></svg> Kick <span class="live-dot"></span>
           </button>
         </div>
@@ -298,7 +307,7 @@
       } catch(e){}
     }
     function pauseTwitch(){ try { twitchPlayer && twitchPlayer.pause(); } catch(e){} }
-    function destroyTwitch(){ try{ twitchPlayer && twitchPlayer.pause(); }catch(e){} /* API bietet kein destroy */ }
+    function destroyTwitch(){ try{ twitchPlayer && twitchPlayer.pause(); }catch(e){} /* kein destroy in API */ }
 
     // --- Kick URL
     function kickURL(muted){
@@ -333,6 +342,7 @@
     function render(){
       const tOff = !state.twitchLive, kOff = !state.kickLive;
 
+      // Tabs: nur Previews (nicht Follow-Buttons) ausgrauen
       twitchBtn.classList.toggle('online', !tOff);
       kickBtn.classList.toggle('online', !kOff);
       twitchBtn.classList.toggle('offline', tOff);
@@ -340,6 +350,7 @@
       twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
       kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
 
+      // Follow-Buttons: Live-Badge
       btnTwitch.classList.toggle('live', state.twitchLive);
       btnKick.classList.toggle('live', state.kickLive);
 
@@ -372,9 +383,7 @@
         if (el && el.src && !el.src.startsWith('about:')) pauseKick();
       }
       // Twitch-RO sparen, wenn Twitch nicht sichtbar
-      if (twitchRO){
-        if (!showT) try{ twitchRO.disconnect(); twitchRO=null; }catch(e){}
-      }
+      if (twitchRO && !showT){ try{ twitchRO.disconnect(); twitchRO=null; }catch(e){} }
     }
 
     function show(which){
@@ -383,7 +392,7 @@
       state.current = which; scheduleRender();
     }
 
-    // Events (passive wo sinnvoll)
+    // Events
     twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); }, {passive:true});
     kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  }, {passive:true});
     heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; }, {passive:true});
@@ -404,6 +413,7 @@
     io.observe(heroCard);
 
     // Initial
+    document.getElementById('year').textContent = new Date().getFullYear();
     render();
 
     // ---- Live-Status: SSE on-demand, sonst Backoff-Polling
