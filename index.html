@@ -92,7 +92,7 @@
       opacity:0;
       transition:opacity .25s ease;
       position:relative;
-      overflow:hidden; /* wichtig für Twitch-iframe */
+      overflow:hidden;
       display:block;
     }
     .player.show, .player-host.show{opacity:1}
@@ -232,8 +232,8 @@
       };
 
       let twitchPlayer = null;
+      let twitchRO = null;
 
-      // ---------- helpers
       function canEmbedTwitch(){
         const proto = location.protocol, host = location.hostname;
         if (proto === 'https:') return true;
@@ -247,31 +247,50 @@
         ['localhost','127.0.0.1'].forEach(d=>{ if(!p.includes(d)) p.push(d); });
         return p;
       }
+
+      // ---- FIX: Player erst nach 2x RAF erstellen + Resize feuern
       function initTwitch(muted){
         if (!canEmbedTwitch()) return;
         if (!window.Twitch || !window.Twitch.Player) return;
-        if (!twitchPlayer){
+        if (twitchPlayer) { try { twitchPlayer.setMuted(!!muted); } catch(e){} return; }
+
+        const make = () => {
+          // numerische Größe für initialen Render
+          const w = twitchHost.clientWidth || 1280;
+          const h = Math.round(w * 9/16);
           twitchPlayer = new Twitch.Player('twitch-host', {
             channel: 'winzilp',
             parent: twitchParents(),
             autoplay: true,
             muted: !!muted,
-            width: '100%',          // <— volle Breite
-            height: '100%'          // <— volle Höhe
+            width: w,
+            height: h
           });
           twitchPlayer.addEventListener(Twitch.Player.READY, ()=> {
             twitchHost.classList.add('show');
+            // Twitch zum Reflow zwingen
+            setTimeout(()=> window.dispatchEvent(new Event('resize')), 50);
           });
-        } else {
-          try { twitchPlayer.setMuted(!!muted); } catch(e){}
-        }
+          // Beobachte Größenänderungen des Hosts und triggere resize
+          if ('ResizeObserver' in window && !twitchRO){
+            twitchRO = new ResizeObserver(()=> {
+              window.dispatchEvent(new Event('resize'));
+            });
+            twitchRO.observe(twitchHost);
+          }
+        };
+        // Warten bis Panel sichtbar & Layout fertig
+        requestAnimationFrame(()=> requestAnimationFrame(make));
       }
+
       function playTwitch(withAudio){
         if (!twitchPlayer) { initTwitch(!withAudio); }
         try {
           if (twitchPlayer){
             twitchPlayer.setMuted(!withAudio);
             twitchPlayer.play();
+            // Sicherheit: nach Umschalten nochmal resize
+            setTimeout(()=> window.dispatchEvent(new Event('resize')), 0);
           }
         } catch(e){}
       }
@@ -296,11 +315,9 @@
         try { kickIframe.src = 'about:blank'; } catch(e){}
       }
 
-      // ---------- render
       function render(){
         const tOff = !state.twitchLive, kOff = !state.kickLive;
 
-        // Tabs (nur Preview-Tabs ausgrauen)
         twitchBtn.classList.toggle('online', !tOff);
         kickBtn.classList.toggle('online', !kOff);
         twitchBtn.classList.toggle('offline', tOff);
@@ -308,7 +325,6 @@
         twitchBtn.disabled = tOff; twitchBtn.setAttribute('aria-disabled', String(tOff));
         kickBtn.disabled   = kOff;   kickBtn.setAttribute('aria-disabled', String(kOff));
 
-        // Follow-Buttons mit LIVE-Pill
         btnTwitch.classList.toggle('live', state.twitchLive);
         btnKick.classList.toggle('live', state.kickLive);
 
@@ -318,7 +334,6 @@
         twitchPanel.hidden = !showT;
         kickPanel.hidden   = !showK;
 
-        // Sichtbarkeits-/Audio-Regel
         const allowAudio = state.userInteracted && document.visibilityState==='visible' && state.heroInView;
 
         if (showT && canEmbedTwitch()) {
@@ -334,19 +349,15 @@
           pauseKick();
         }
 
-        // Offline-Anzeige
         const noOneLive = !state.twitchLive && !state.kickLive;
         offlineBox.classList.toggle('hidden', !noOneLive);
 
-        // Lokaler Embed-Fehler für Twitch (file://)
         const showEmbedError = showT && !canEmbedTwitch();
         embedErrorBox.classList.toggle('show', showEmbedError);
 
-        // ARIA
         twitchBtn.setAttribute('aria-selected', String(state.current === 'twitch'));
         kickBtn.setAttribute('aria-selected', String(state.current === 'kick'));
 
-        // Optik
         if (showT) twitchHost.classList.add('show'); else twitchHost.classList.remove('show');
         if (showK) kickIframe.classList.add('show'); else kickIframe.classList.remove('show');
       }
@@ -357,7 +368,6 @@
         state.current = which; render();
       }
 
-      // ---------- events
       twitchBtn.addEventListener('click', ()=>{ state.userInteracted = true; show('twitch'); });
       kickBtn.addEventListener('click',  ()=>{ state.userInteracted = true; show('kick');  });
       heroCard.addEventListener('pointerdown', ()=>{ state.userInteracted = true; });
@@ -375,10 +385,8 @@
       }, { threshold:[0,0.5,1], rootMargin:"0px" });
       io.observe(heroCard);
 
-      // Initial
       render();
 
-      // ---------- Live-Status (SSE → Fallback Polling)
       const STATUS_ENDPOINT = document.querySelector('meta[name="status-endpoint"]')?.content || '';
       const STATUS_SSE      = document.querySelector('meta[name="status-sse"]')?.content || '';
 
@@ -393,14 +401,12 @@
       function supportsSSE(){ return typeof window.EventSource !== 'undefined'; }
 
       (function initLive(){
-        // Dev: ?live=none|twitch|kick|both
         const liveParam = new URLSearchParams(location.search).get('live');
         if (liveParam) {
           const map = {twitch:[true,false],kick:[false,true],both:[true,true],none:[false,false]};
           if (map[liveParam]) { applyLive(map[liveParam][0], map[liveParam][1]); return; }
         }
         if (!STATUS_ENDPOINT && !STATUS_SSE) return;
-
         if (STATUS_SSE && supportsSSE()) {
           try {
             const es = new EventSource(STATUS_SSE);
