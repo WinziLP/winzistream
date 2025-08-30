@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+# Optional: Trage hier deine kanonische Domain ein, falls vorhanden
+# Sitemap: https://winzi.stream/sitemap.xml
+
